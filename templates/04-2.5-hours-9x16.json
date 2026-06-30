@@ -11,5 +11,6 @@
   "panelMode": "scrim", "panelOp": 100,
   "headColor": "#FFFFFF", "hSize": 105,
   "showWordmark": true,
+  "pill": "$85/pax", "showPill": false, "pillX": 0.6, "pillY": 0.8,
   "activeLayer": "block"
 }

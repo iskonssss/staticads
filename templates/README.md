@@ -2,7 +2,11 @@
 
 Loadable starting points for the [Forgecraft Ad Generator](../index.html). Each `.json` captures a layout (format, panel style, copy, colours, text position) — **the photo is intentionally left out** so you drop in your own image per ad.
 
-## How to use
+## Easiest: the in-app picker
+
+These presets are also built into the generator. In the controls, use **Start from a template** (just under Format) and pick one — it applies instantly and keeps your uploaded photo. No download needed; ideal on a phone. The `.json` files below are the same presets for downloading/sharing.
+
+## How to use (download path)
 
 1. Download the `.json` you want (on the GitHub file page, use **Download raw file**).
 2. Open the ad generator, click **Upload an image** and add your photo.

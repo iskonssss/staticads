@@ -96,6 +96,10 @@
       <button data-f="9x16">9:16</button>
     </div>
 
+    <h2>Start from a template</h2>
+    <select id="tplSelect"><option value="">Load a template…</option></select>
+    <div class="small">Sets the copy, layout & panel. Keeps your uploaded photo — upload it before or after.</div>
+
     <h2>Photo</h2>
     <div class="uploadbox" id="uploadbox">Click or drop an image here</div>
     <input type="file" id="file" accept="image/*" hidden>
@@ -232,9 +236,6 @@ function draw(g,W,H,k){
   // photo
   if(st.panelMode==="split"){
     const pw=Math.round(W*0.54);
-    g.save();g.beginPath();g.rect(W-pw,0,pw,H);g.clip();drawPhoto(g,pw,H,st.photoImg? shifted(W-pw):null,st);g.restore();
-    // simpler: draw full then panel; do panel below
-    g.clearRect(0,0,W,H);
     g.save();g.beginPath();g.rect(W-pw,0,pw,H);g.clip();
     drawPhotoBox(g,W-pw,0,pw,H,st);g.restore();
     g.fillStyle=GREEN; g.fillRect(0,0,W-pw,H);
@@ -478,6 +479,29 @@ document.getElementById("exJson").onclick=()=>{
   out.photo=st.photo; // keep embedded image
   const blob=new Blob([JSON.stringify(out,null,2)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`forgecraft_ad_${st.fmt}.json`;a.click();
+};
+
+// ---- built-in templates (one-tap presets; photo is never touched) ----
+const TEMPLATES=[
+  {name:"Screen time · 1:1 (split + pill)", st:{fmt:"1x1",vx:50,vy:50,zoom:100,darkness:0,eyebrow:"FOR KIDS AGED 6–12",headline:"Screen time that actually builds something.",sub:"Kids learn 3D modelling, watch it print live, and bring home what they made.",cta:"Beginner 3D Printing Workshop  ·  Aljunied",blockX:0.065,blockY:0.075,off:{eyebrow:[0,0],headline:[0,0],sub:[0,0]},anchor:"tl",panelMode:"split",panelOp:100,headColor:"#FFFFFF",hSize:100,showWordmark:true,pill:"$85/pax",showPill:true,pillX:0.62,pillY:0.8,activeLayer:"block"}},
+  {name:"Screen time · 9:16",st:{fmt:"9x16",vx:50,vy:35,zoom:100,darkness:0,eyebrow:"FOR KIDS AGED 6–12",headline:"Screen time that actually builds something.",sub:"Kids learn 3D modelling for 3D Printing and bring home what they made.",cta:"$85/pax  ·  Aljunied, Singapore",blockX:0.065,blockY:0.52,off:{eyebrow:[0,0],headline:[0,0],sub:[0,0]},anchor:"bl",panelMode:"bottom",panelOp:100,headColor:"#FFFFFF",hSize:95,showWordmark:true,pill:"$85/pax",showPill:false,pillX:0.6,pillY:0.8,activeLayer:"block"}},
+  {name:"In 2.5 hours · 1:1",st:{fmt:"1x1",vx:50,vy:50,zoom:100,darkness:0,eyebrow:"BEGINNER 3D PRINTING WORKSHOP",headline:"In 2.5 hours, your child designs and prints this.",sub:"No experience needed. 1 project per kid. They bring it home the same day.",cta:"Book a Slot  ·  From $75/pax",blockX:0.065,blockY:0.56,off:{eyebrow:[0,0],headline:[0,0],sub:[0,0]},anchor:"bl",panelMode:"bottom",panelOp:100,headColor:"#FFFFFF",hSize:90,showWordmark:true,pill:"$85/pax",showPill:false,pillX:0.6,pillY:0.8,activeLayer:"block"}},
+  {name:"In 2.5 hours · 9:16 (scrim)",st:{fmt:"9x16",vx:50,vy:60,zoom:100,darkness:0,eyebrow:"BEGINNER 3D PRINTING WORKSHOP",headline:"In 2.5 hours, your child designs and prints this.",sub:"No experience needed. 1 project per kid. They bring it home the same day.",cta:"Book a Slot  ·  From $75/pax",blockX:0.065,blockY:0.06,off:{eyebrow:[0,0],headline:[0,0],sub:[0,0]},anchor:"tl",panelMode:"scrim",panelOp:100,headColor:"#FFFFFF",hSize:105,showWordmark:true,pill:"$85/pax",showPill:false,pillX:0.6,pillY:0.8,activeLayer:"block"}},
+  {name:"Holiday well spent · 1:1",st:{fmt:"1x1",vx:50,vy:40,zoom:100,darkness:0,eyebrow:"FOR KIDS AGED 6–12",headline:"This is what a school holiday well spent looks like.",sub:"3D Printing Workshop, ages 6–12. 2.5 hours. They design it, print it, and keep it.",cta:"From $75/pax  ·  Aljunied, Singapore",blockX:0.065,blockY:0.52,off:{eyebrow:[0,0],headline:[0,0],sub:[0,0]},anchor:"bl",panelMode:"bottom",panelOp:100,headColor:"#FFFFFF",hSize:92,showWordmark:true,pill:"$85/pax",showPill:false,pillX:0.6,pillY:0.8,activeLayer:"block"}}
+];
+const tplSelect=document.getElementById("tplSelect");
+TEMPLATES.forEach((t,i)=>{const o=document.createElement("option");o.value=String(i);o.textContent=t.name;tplSelect.appendChild(o);});
+tplSelect.onchange=()=>{
+  const t=TEMPLATES[tplSelect.value]; tplSelect.value="";  // reset so the same one can be re-picked
+  if(!t)return;
+  Object.assign(st, JSON.parse(JSON.stringify(t.st)));   // deep copy so the preset isn't mutated by later edits
+  document.getElementById("t_eyebrow").value=st.eyebrow||"";
+  document.getElementById("t_headline").value=st.headline||"";
+  document.getElementById("t_sub").value=st.sub||"";
+  document.getElementById("t_cta").value=st.cta||"";
+  document.getElementById("t_pill").value=st.pill||"";
+  document.getElementById("showPill").checked=!!st.showPill;
+  sync(); render();
 };
 
 // ---- AI copy generation: bring-your-own-key, direct browser call to Claude ----
