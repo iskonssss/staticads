@@ -248,10 +248,12 @@ function draw(g,W,H,k){
   const op=st.panelOp/100;
   if(st.panelMode==="bottom"){
     const bandH=H*0.44, top=H-bandH, fspan=bandH*0.32;
-    const lg=g.createLinearGradient(0,top,0,top+fspan);
-    lg.addColorStop(0,hexA(GREEN,0)); lg.addColorStop(1,hexA(GREEN,op));
-    g.fillStyle=lg; g.fillRect(0,top,W,fspan);
-    g.fillStyle=hexA(GREEN,op); g.fillRect(0,top+fspan,W,H-(top+fspan));
+    // single rect + one gradient (fade-in over fspan, then hold solid) so there's
+    // no seam between two adjacent fills at a fractional pixel boundary
+    const lg=g.createLinearGradient(0,top,0,H);
+    const fp=Math.min(1,fspan/(H-top));
+    lg.addColorStop(0,hexA(GREEN,0)); lg.addColorStop(fp,hexA(GREEN,op)); lg.addColorStop(1,hexA(GREEN,op));
+    g.fillStyle=lg; g.fillRect(0,top,W,H-top);
   } else if(st.panelMode==="scrim"){
     const tg=g.createLinearGradient(0,0,0,H*0.5);tg.addColorStop(0,hexA(GREEN_DK,0.55*op));tg.addColorStop(1,hexA(GREEN_DK,0));g.fillStyle=tg;g.fillRect(0,0,W,H*0.5);
     const bg=g.createLinearGradient(0,H*0.55,0,H);bg.addColorStop(0,hexA(GREEN_DK,0));bg.addColorStop(1,hexA(GREEN_DK,0.6*op));g.fillStyle=bg;g.fillRect(0,H*0.55,W,H*0.45);
@@ -468,6 +470,7 @@ document.getElementById("jsonFile").onchange=e=>{
     document.getElementById("t_cta").value=st.cta||"";
     document.getElementById("t_pill").value=st.pill||"";
     document.getElementById("showPill").checked=!!st.showPill;
+    document.getElementById("showWm").checked=!!st.showWordmark;
     sync();render();
   }catch(err){alert("Could not read JSON: "+err.message);}};
   r.readAsText(f);
@@ -483,7 +486,7 @@ document.getElementById("exJson").onclick=()=>{
 
 // ---- built-in templates (one-tap presets; photo is never touched) ----
 const TEMPLATES=[
-  {name:"Screen time · 1:1 (split + pill)", st:{fmt:"1x1",vx:50,vy:50,zoom:100,darkness:0,eyebrow:"FOR KIDS AGED 6–12",headline:"Screen time that actually builds something.",sub:"Kids learn 3D modelling, watch it print live, and bring home what they made.",cta:"Beginner 3D Printing Workshop  ·  Aljunied",blockX:0.065,blockY:0.075,off:{eyebrow:[0,0],headline:[0,0],sub:[0,0]},anchor:"tl",panelMode:"split",panelOp:100,headColor:"#FFFFFF",hSize:100,showWordmark:true,pill:"$85/pax",showPill:true,pillX:0.62,pillY:0.8,activeLayer:"block"}},
+  {name:"Screen time · 1:1 (split + pill)", st:{fmt:"1x1",vx:50,vy:50,zoom:100,darkness:0,eyebrow:"FOR KIDS AGED 6–12",headline:"Screen time that actually builds something.",sub:"Kids learn 3D modelling for 3D Printing and bring home what they made.",cta:"Beginner 3D Printing Workshop  ·  Aljunied",blockX:0.0432,blockY:0.2244,off:{eyebrow:[0,0],headline:[0,0],sub:[0,0]},anchor:"tl",panelMode:"split",panelOp:100,headColor:"#FFFFFF",hSize:80,showWordmark:false,pill:"$85/pax",showPill:true,pillX:0.6334,pillY:0.7194,activeLayer:"block"}},
   {name:"Screen time · 9:16",st:{fmt:"9x16",vx:50,vy:35,zoom:100,darkness:0,eyebrow:"FOR KIDS AGED 6–12",headline:"Screen time that actually builds something.",sub:"Kids learn 3D modelling for 3D Printing and bring home what they made.",cta:"$85/pax  ·  Aljunied, Singapore",blockX:0.065,blockY:0.52,off:{eyebrow:[0,0],headline:[0,0],sub:[0,0]},anchor:"bl",panelMode:"bottom",panelOp:100,headColor:"#FFFFFF",hSize:95,showWordmark:true,pill:"$85/pax",showPill:false,pillX:0.6,pillY:0.8,activeLayer:"block"}},
   {name:"In 2.5 hours · 1:1",st:{fmt:"1x1",vx:50,vy:50,zoom:100,darkness:0,eyebrow:"BEGINNER 3D PRINTING WORKSHOP",headline:"In 2.5 hours, your child designs and prints this.",sub:"No experience needed. 1 project per kid. They bring it home the same day.",cta:"Book a Slot  ·  From $75/pax",blockX:0.065,blockY:0.56,off:{eyebrow:[0,0],headline:[0,0],sub:[0,0]},anchor:"bl",panelMode:"bottom",panelOp:100,headColor:"#FFFFFF",hSize:90,showWordmark:true,pill:"$85/pax",showPill:false,pillX:0.6,pillY:0.8,activeLayer:"block"}},
   {name:"In 2.5 hours · 9:16 (scrim)",st:{fmt:"9x16",vx:50,vy:60,zoom:100,darkness:0,eyebrow:"BEGINNER 3D PRINTING WORKSHOP",headline:"In 2.5 hours, your child designs and prints this.",sub:"No experience needed. 1 project per kid. They bring it home the same day.",cta:"Book a Slot  ·  From $75/pax",blockX:0.065,blockY:0.06,off:{eyebrow:[0,0],headline:[0,0],sub:[0,0]},anchor:"tl",panelMode:"scrim",panelOp:100,headColor:"#FFFFFF",hSize:105,showWordmark:true,pill:"$85/pax",showPill:false,pillX:0.6,pillY:0.8,activeLayer:"block"}},
@@ -501,6 +504,7 @@ tplSelect.onchange=()=>{
   document.getElementById("t_cta").value=st.cta||"";
   document.getElementById("t_pill").value=st.pill||"";
   document.getElementById("showPill").checked=!!st.showPill;
+  document.getElementById("showWm").checked=!!st.showWordmark;
   sync(); render();
 };
 
