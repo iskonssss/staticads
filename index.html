@@ -105,7 +105,15 @@
     <div class="ctl"><label>Darkness <span class="val" id="darkV">0%</span></label><input type="range" id="darkness" min="0" max="90" value="0"></div>
 
     <h2>Copy</h2>
-    <div class="ctl"><label>Eyebrow (small caps)</label><input type="text" id="t_eyebrow" value="FOR KIDS AGED 6–12"></div>
+    <div class="ctl"><label>AI brief / angle (optional)</label><input type="text" id="aiBrief" placeholder="e.g. holiday camp, emphasise take-home models"></div>
+    <button class="btn gold" id="genCopy">✨ Generate ad copy</button>
+    <div class="small" id="genStatus"></div>
+    <details style="margin-top:8px">
+      <summary>AI settings (API key)</summary>
+      <div class="ctl" style="margin-top:10px"><label>Anthropic API key</label><input type="password" id="apiKey" placeholder="sk-ant-…" autocomplete="off"></div>
+      <div class="small">Stored only in this browser (localStorage) — never uploaded or committed to the repo. Get a key at console.anthropic.com. Uses Claude Haiku 4.5 (~US$0.0015 per generation).</div>
+    </details>
+    <div class="ctl" style="margin-top:14px"><label>Eyebrow (small caps)</label><input type="text" id="t_eyebrow" value="FOR KIDS AGED 6–12"></div>
     <div class="ctl"><label>Headline</label><textarea id="t_headline">Screen time that actually builds something.</textarea></div>
     <div class="ctl"><label>Subhead</label><textarea id="t_sub">Kids learn 3D modelling and bring home what they made.</textarea></div>
     <div class="ctl"><label>CTA bar (bottom)</label><input type="text" id="t_cta" value="From $75/pax  ·  Aljunied, Singapore"></div>
@@ -440,6 +448,59 @@ document.getElementById("exJson").onclick=()=>{
   out.photo=st.photo; // keep embedded image
   const blob=new Blob([JSON.stringify(out,null,2)],{type:"application/json"});
   const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`forgecraft_ad_${st.fmt}.json`;a.click();
+};
+
+// ---- AI copy generation: bring-your-own-key, direct browser call to Claude ----
+// The image is never sent — only short text copy is generated. The key lives only
+// in this browser's localStorage; it is never exported in JSON or committed.
+const apiKeyInput=document.getElementById("apiKey");
+apiKeyInput.value=localStorage.getItem("forgecraft_anthropic_key")||"";
+apiKeyInput.oninput=()=>localStorage.setItem("forgecraft_anthropic_key",apiKeyInput.value.trim());
+const genStatus=document.getElementById("genStatus");
+document.getElementById("genCopy").onclick=async()=>{
+  const key=(apiKeyInput.value||"").trim();
+  if(!key){genStatus.textContent='Add your Anthropic API key under “AI settings” first.';return;}
+  const btn=document.getElementById("genCopy"), label=btn.textContent;
+  const brief=(document.getElementById("aiBrief").value||"").trim();
+  btn.disabled=true; btn.textContent="Generating…"; genStatus.textContent="";
+  try{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{
+        "content-type":"application/json",
+        "x-api-key":key,
+        "anthropic-version":"2023-06-01",
+        "anthropic-dangerous-direct-browser-access":"true"
+      },
+      body:JSON.stringify({
+        model:"claude-haiku-4-5",
+        max_tokens:400,
+        system:"You write punchy social-ad copy for Forgecraft, a hands-on 3D-printing workshop for kids aged 6–12 in Singapore (Aljunied). Voice: playful, concrete, parent-facing; no hype words or clichés. Respond with ONLY a JSON object (no markdown, no prose) with exactly these keys: eyebrow (a short ALL-CAPS kicker), headline (8 words or fewer), subhead (one sentence), cta (a short bottom-bar line, usually price + location like \"From $75/pax · Aljunied, Singapore\").",
+        messages:[{role:"user",content: brief ? ("Angle for this ad: "+brief) : "Write a fresh general ad."}]
+      })
+    });
+    if(!res.ok){
+      let msg=res.status+" "+res.statusText;
+      try{const e=await res.json(); if(e&&e.error&&e.error.message) msg=e.error.message;}catch(_){}
+      throw new Error(msg);
+    }
+    const data=await res.json();
+    const text=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("");
+    const a=text.indexOf("{"), b=text.lastIndexOf("}");
+    if(a<0||b<a) throw new Error("Unexpected response from the model.");
+    const o=JSON.parse(text.slice(a,b+1));
+    const sub = o.sub!=null ? o.sub : o.subhead;
+    if(o.eyebrow!=null){st.eyebrow=String(o.eyebrow);document.getElementById("t_eyebrow").value=st.eyebrow;}
+    if(o.headline!=null){st.headline=String(o.headline);document.getElementById("t_headline").value=st.headline;}
+    if(sub!=null){st.sub=String(sub);document.getElementById("t_sub").value=st.sub;}
+    if(o.cta!=null){st.cta=String(o.cta);document.getElementById("t_cta").value=st.cta;}
+    render();
+    genStatus.textContent="Done — tweak any field by hand if you like.";
+  }catch(err){
+    genStatus.textContent="Couldn’t generate: "+err.message;
+  }finally{
+    btn.disabled=false; btn.textContent=label;
+  }
 };
 
 let fontsReady=false;
