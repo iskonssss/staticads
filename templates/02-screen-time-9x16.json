@@ -1,0 +1,15 @@
+{
+  "fmt": "9x16",
+  "vx": 50, "vy": 35, "zoom": 100, "darkness": 0,
+  "eyebrow": "FOR KIDS AGED 6–12",
+  "headline": "Screen time that actually builds something.",
+  "sub": "Kids learn 3D modelling for 3D Printing and bring home what they made.",
+  "cta": "$85/pax  ·  Aljunied, Singapore",
+  "blockX": 0.065, "blockY": 0.52,
+  "off": { "eyebrow": [0, 0], "headline": [0, 0], "sub": [0, 0] },
+  "anchor": "bl",
+  "panelMode": "bottom", "panelOp": 100,
+  "headColor": "#FFFFFF", "hSize": 95,
+  "showWordmark": true,
+  "activeLayer": "block"
+}

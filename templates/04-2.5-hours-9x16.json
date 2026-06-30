@@ -1,0 +1,15 @@
+{
+  "fmt": "9x16",
+  "vx": 50, "vy": 60, "zoom": 100, "darkness": 0,
+  "eyebrow": "BEGINNER 3D PRINTING WORKSHOP",
+  "headline": "In 2.5 hours, your child designs and prints this.",
+  "sub": "No experience needed. 1 project per kid. They bring it home the same day.",
+  "cta": "Book a Slot  ·  From $75/pax",
+  "blockX": 0.065, "blockY": 0.06,
+  "off": { "eyebrow": [0, 0], "headline": [0, 0], "sub": [0, 0] },
+  "anchor": "tl",
+  "panelMode": "scrim", "panelOp": 100,
+  "headColor": "#FFFFFF", "hSize": 105,
+  "showWordmark": true,
+  "activeLayer": "block"
+}

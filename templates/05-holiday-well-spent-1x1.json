@@ -1,0 +1,15 @@
+{
+  "fmt": "1x1",
+  "vx": 50, "vy": 40, "zoom": 100, "darkness": 0,
+  "eyebrow": "FOR KIDS AGED 6–12",
+  "headline": "This is what a school holiday well spent looks like.",
+  "sub": "3D Printing Workshop, ages 6–12. 2.5 hours. They design it, print it, and keep it.",
+  "cta": "From $75/pax  ·  Aljunied, Singapore",
+  "blockX": 0.065, "blockY": 0.52,
+  "off": { "eyebrow": [0, 0], "headline": [0, 0], "sub": [0, 0] },
+  "anchor": "bl",
+  "panelMode": "bottom", "panelOp": 100,
+  "headColor": "#FFFFFF", "hSize": 92,
+  "showWordmark": true,
+  "activeLayer": "block"
+}
