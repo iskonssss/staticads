@@ -24,4 +24,4 @@ Loadable starting points for the [Forgecraft Ad Generator](../index.html). Each 
 ## Notes
 
 - `blockY` (vertical text position) and `hSize` (headline size) are starting points — adjust per photo.
-- The single gold CTA bar can't reproduce a separate floating price pill; price/location live in the one CTA line.
+- The floating gold **price pill** is now a real draggable layer: tick **Price pill** in the Copy section, edit the text, then choose **Move pill** under Text placement and drag it on the canvas. Template 01 has it switched on.

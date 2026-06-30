@@ -117,6 +117,7 @@
     <div class="ctl"><label>Headline</label><textarea id="t_headline">Screen time that actually builds something.</textarea></div>
     <div class="ctl"><label>Subhead</label><textarea id="t_sub">Kids learn 3D modelling and bring home what they made.</textarea></div>
     <div class="ctl"><label>CTA bar (bottom)</label><input type="text" id="t_cta" value="From $75/pax  ·  Aljunied, Singapore"></div>
+    <div class="ctl"><label style="cursor:pointer"><input type="checkbox" id="showPill" style="width:auto;margin-right:8px">Price pill (drag to place)</label><input type="text" id="t_pill" value="$85/pax" style="margin-top:6px"></div>
 
     <h2>Text placement</h2>
     <div class="seg" id="anchor">
@@ -184,6 +185,8 @@ let st={
   panelMode:"bottom", panelOp:100,
   headColor:"#FFFFFF", hSize:100,
   showWordmark:true,
+  // draggable gold price pill (top-left as fraction of canvas)
+  pill:"$85/pax", showPill:false, pillX:0.6, pillY:0.8,
   activeLayer:"block"
 };
 
@@ -302,6 +305,25 @@ function draw(g,W,H,k){
     g.fillStyle=WHITE; g.fillText("Forge",mx,wmY);
     const fw=g.measureText("Forge").width; g.fillStyle=GOLD; g.fillText("craft",mx+fw,wmY);
   }
+  // price pill — drawn last so it floats on top of everything
+  drawPill(g,W,H,k);
+}
+function roundRect(g,x,y,w,h,r){
+  g.beginPath();
+  g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r);
+  g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();
+}
+function drawPill(g,W,H,k){
+  if(!st.showPill || !st.pill.trim()) return;
+  const fs=(st.fmt==="9x16"?46:42)*k;
+  g.font=`700 ${fs}px GroteskX`;
+  const tw=g.measureText(st.pill).width;
+  const padX=fs*0.6, padY=fs*0.42, w=tw+padX*2, h=fs+padY*2;
+  const x=st.pillX*W, y=st.pillY*H, r=h*0.3;
+  g.fillStyle=GOLD; roundRect(g,x,y,w,h,r); g.fill();
+  g.fillStyle=INK; g.font=`700 ${fs}px GroteskX`; g.textAlign="left"; g.textBaseline="middle";
+  g.fillText(st.pill,x+padX,y+h/2);
+  g.textAlign="left"; g.textBaseline="alphabetic";
 }
 function drawPhotoBox(g,x,y,w,h,s){
   if(!s.photoImg){g.fillStyle="#cfcabf";g.fillRect(x,y,w,h);return;}
@@ -347,6 +369,9 @@ cv.addEventListener("pointermove",e=>{
     st.vx=Math.max(0,Math.min(100,st.vx - dx*0.55));
     st.vy=Math.max(0,Math.min(100,st.vy - dy*0.55));
     sync();
+  } else if(st.activeLayer==="pill"){
+    st.pillX=Math.max(-0.15,Math.min(0.95,st.pillX+dx/W));
+    st.pillY=Math.max(-0.1,Math.min(0.95,st.pillY+dy/H));
   } else {
     const o=st.off[st.activeLayer]; o[0]+=dx/W; o[1]+=dy/H;
   }
@@ -354,9 +379,11 @@ cv.addEventListener("pointermove",e=>{
 });
 cv.addEventListener("wheel",e=>{e.preventDefault();st.zoom=Math.max(100,Math.min(300,st.zoom+(e.deltaY<0?5:-5)));sync();render();},{passive:false});
 
-// add a Photo layer button dynamically into layerSel
+// add Photo + Pill layer buttons dynamically into layerSel
 const photoLayerBtn=document.createElement("button");photoLayerBtn.dataset.l="photo";photoLayerBtn.textContent="Move photo";
 document.getElementById("layerSel").appendChild(photoLayerBtn);
+const pillLayerBtn=document.createElement("button");pillLayerBtn.dataset.l="pill";pillLayerBtn.textContent="Move pill";
+document.getElementById("layerSel").appendChild(pillLayerBtn);
 
 function sync(){
   document.getElementById("vx").value=st.vx; document.getElementById("vxV").textContent=Math.round(st.vx);
@@ -375,7 +402,7 @@ document.querySelectorAll("#fmt button").forEach(b=>b.onclick=()=>{st.fmt=b.data
 for(const [id,key] of [["vx","vx"],["vy","vy"],["zoom","zoom"],["darkness","darkness"],["panelOp","panelOp"],["hSize","hSize"]]){
   document.getElementById(id).oninput=e=>{st[key]=parseInt(e.target.value);sync();render();};
 }
-for(const [id,key] of [["t_eyebrow","eyebrow"],["t_headline","headline"],["t_sub","sub"],["t_cta","cta"]]){
+for(const [id,key] of [["t_eyebrow","eyebrow"],["t_headline","headline"],["t_sub","sub"],["t_cta","cta"],["t_pill","pill"]]){
   document.getElementById(id).oninput=e=>{st[key]=e.target.value;render();};
 }
 document.querySelectorAll("#panelMode button").forEach(b=>b.onclick=()=>{st.panelMode=b.dataset.p;sync();render();});
@@ -391,6 +418,7 @@ document.querySelectorAll("#anchor button").forEach(b=>b.onclick=()=>{
 });
 document.querySelectorAll(".swatch").forEach(s=>s.onclick=()=>{if(s.dataset.t==="head"){st.headColor=s.dataset.c;render();}});
 document.getElementById("showWm").onchange=e=>{st.showWordmark=e.target.checked;render();};
+document.getElementById("showPill").onchange=e=>{st.showPill=e.target.checked; if(st.showPill){st.activeLayer="pill";sync();} render();};
 
 // upload
 const fileInput=document.getElementById("file"), box=document.getElementById("uploadbox");
@@ -437,6 +465,8 @@ document.getElementById("jsonFile").onchange=e=>{
     document.getElementById("t_headline").value=st.headline||"";
     document.getElementById("t_sub").value=st.sub||"";
     document.getElementById("t_cta").value=st.cta||"";
+    document.getElementById("t_pill").value=st.pill||"";
+    document.getElementById("showPill").checked=!!st.showPill;
     sync();render();
   }catch(err){alert("Could not read JSON: "+err.message);}};
   r.readAsText(f);

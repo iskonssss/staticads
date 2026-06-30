@@ -11,5 +11,6 @@
   "panelMode": "split", "panelOp": 100,
   "headColor": "#FFFFFF", "hSize": 100,
   "showWordmark": true,
+  "pill": "$85/pax", "showPill": true, "pillX": 0.62, "pillY": 0.8,
   "activeLayer": "block"
 }
