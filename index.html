@@ -164,7 +164,7 @@
     </div>
     <button class="btn gold" id="loadJson" style="margin-top:6px">Load JSON</button>
     <input type="file" id="jsonFile" accept="application/json" hidden>
-    <div class="small">PNG exports at full resolution (1080px). JSON saves all settings so you can reload and keep editing.</div>
+    <div class="small">PNG exports at full resolution (1080px). On a phone, choose <b>Save Image</b> in the share sheet to add it to your Photos. JSON saves all settings so you can reload and keep editing.</div>
   </div>
 </div>
 
@@ -448,7 +448,21 @@ document.getElementById("exPng").onclick=async()=>{
   const off=document.createElement("canvas");off.width=FW;off.height=FH;
   const g=off.getContext("2d");
   draw(g,FW,FH,1.0);
-  off.toBlob(b=>{const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=`forgecraft_ad_${st.fmt}.png`;a.click();},"image/png");
+  const blob=await new Promise(res=>off.toBlob(res,"image/png"));
+  if(!blob)return;
+  const name=`forgecraft_ad_${st.fmt}.png`;
+  // On phones, open the share sheet so the user can "Save Image" straight to the
+  // photo gallery. Falls back to a normal download on desktop.
+  try{
+    const file=new File([blob],name,{type:"image/png"});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file],title:"Forgecraft ad"});
+      return;
+    }
+  }catch(err){ if(err && err.name==="AbortError") return; } // user dismissed sheet; else fall through
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
 // export JSON
 document.getElementById("exJson").onclick=()=>{
