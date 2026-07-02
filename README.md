@@ -31,7 +31,7 @@ What it does:
 - **🔥 Today queue** — the default view shows exactly who to call right now: overdue follow-ups first, then new leads you've never called, then no-answer retries. No more guessing who you've contacted.
 - **One-tap Call / WhatsApp** on every lead. After you tap Call and come back to the page, it prompts you to log the outcome.
 - **Call logging** — picked up / no answer (attempt count), outcome (🎉 closed, 📅 follow up with a date, 🌱 nurture, ✖️ lost) and the objection (price, timing, kid too young…).
-- **Import Meta Ads CSV** — download leads from Ads Manager / Leads Center and import; duplicates (by phone) are skipped, so you can safely re-import the full export every few days. Extra form questions land in the lead's notes.
+- **Import Meta Ads CSV** — download leads from Leads Centre or Ads Manager and import; both formats are auto-detected. Duplicates (by phone) are skipped, so you can safely re-import the full export every few days. Leads already marked **Converted** in Leads Centre come in as Won; extra form questions land in the lead's notes; rows with no phone number (e.g. Messenger/IG organic leads) are skipped and counted.
 - **📣 Blast (nurture)** — pick a segment (nurture / lost / no answer…), write one message (use `{name}`), then tap Send per lead: WhatsApp opens pre-filled and personalised. Includes editable message templates.
 - **Stats** — due now, to call, follow-ups, won, close rate.
 

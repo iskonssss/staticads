@@ -721,12 +721,26 @@ function guessCol(cands){
   for(const c of cands){const i=hs.findIndex(h=>h.includes(c)); if(i>=0)return i;}
   return -1;
 }
+function parseDateFlexible(s){
+  s=String(s||'').trim();
+  if(!s)return null;
+  // Meta Leads Centre format: MM/DD/YYYY h:mmam|pm
+  const m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ T](\d{1,2}):(\d{2})\s*(am|pm)?)?$/i);
+  if(m){
+    let h=m[4]?parseInt(m[4],10):9;
+    const ap=(m[6]||'').toLowerCase();
+    if(ap==='pm'&&h<12)h+=12; if(ap==='am'&&h===12)h=0;
+    return new Date(+m[3],+m[1]-1,+m[2],h,m[5]?parseInt(m[5],10):0).getTime();
+  }
+  const d=new Date(s); return isNaN(d)?null:d.getTime();
+}
 function showImportMap(){
   const fields=[['name','Name',['full_name','full name','name']],
-                ['phone','Phone',['phone']],
+                ['phone','Phone',['phone_number','phone','whatsapp','mobile']],
                 ['email','Email',['email']],
                 ['created','Date in',['created_time','created','date']],
-                ['ad','Ad / campaign',['ad_name','adset','campaign']]];
+                ['ad','Ad / form',['ad_name','adset','campaign','form']],
+                ['stage','Stage',['stage']]];
   $('impInfo').textContent=imp.rows.length+' rows found. Check the column matching below:';
   $('impMap').innerHTML=fields.map(([k,lbl,cands])=>{
     const g=guessCol(cands);
@@ -740,38 +754,44 @@ function showImportMap(){
 }
 $('btnDoImport').onclick=()=>{
   const gi=k=>parseInt($('map_'+k).value,10);
-  const iN=gi('name'), iP=gi('phone'), iE=gi('email'), iC=gi('created'), iA=gi('ad');
+  const iN=gi('name'), iP=gi('phone'), iE=gi('email'), iC=gi('created'), iA=gi('ad'), iS=gi('stage');
   if(iP<0){toast('Pick the phone column — it\'s required');return;}
   const extras=$('impExtras').checked;
-  const mapped=new Set([iN,iP,iE,iC,iA].filter(x=>x>=0));
+  const mapped=new Set([iN,iP,iE,iC,iA,iS].filter(x=>x>=0));
   const existing=new Set(state.leads.map(l=>l.phone));
-  let added=0,skipped=0;
+  let added=0,dupes=0,noPhone=0,won=0;
   for(const r of imp.rows){
     const phone=normPhone(r[iP]);
-    if(phone.length<8){skipped++;continue;}
-    if(existing.has(phone)){skipped++;continue;}
+    if(phone.length<8){noPhone++;continue;}
+    if(existing.has(phone)){dupes++;continue;}
     existing.add(phone);
-    let created=Date.now();
-    if(iC>=0&&r[iC]){const d=new Date(r[iC]); if(!isNaN(d))created=d.getTime();}
+    const created=(iC>=0?parseDateFlexible(r[iC]):null)||Date.now();
     let notes='';
     if(iA>=0&&r[iA]) notes+='Ad: '+r[iA];
     if(extras){
       imp.headers.forEach((h,i)=>{
-        if(!mapped.has(i)&&r[i]&&r[i].trim()&&!/^(id|form_id|is_organic|lead_status|platform)$/i.test(h.trim()))
+        if(!mapped.has(i)&&r[i]&&r[i].trim()&&!/^(id|form_id|is_organic|lead_status|platform|source|channel|owner|labels|stage|secondary.*|whatsapp.*)$/i.test(h.trim()))
           notes+=(notes?'\n':'')+h.trim()+': '+r[i].trim();
       });
     }
+    // Leads Centre "Stage": leads already marked Converted come in as Won
+    const converted=iS>=0&&/^converted$/i.test((r[iS]||'').trim());
     const l={id:uid(),name:(iN>=0?r[iN]:'').trim()||'Lead '+phone.slice(-4),phone,
       email:iE>=0?(r[iE]||'').trim():'',source:'meta',createdAt:created,lastActionAt:created,
-      status:'new',objection:'',followUpAt:null,notes,attempts:0,log:[]};
-    addLog(l,'import','Imported from Meta CSV');
+      status:converted?'won':'new',objection:'',followUpAt:null,notes,attempts:0,log:[],
+      wonAt:converted?created:null};
+    addLog(l,'import',converted?'Imported from Meta CSV — already Converted in Leads Centre 🎉':'Imported from Meta CSV');
     l.lastActionAt=created;
     state.leads.push(l);
-    added++;
+    added++; if(converted)won++;
   }
   closeOv('ovImport'); imp=null;
   setTab('today');
-  toast('Imported '+added+' lead'+(added===1?'':'s')+(skipped?' · skipped '+skipped+' (duplicates/invalid)':''));
+  const bits=['Imported '+added+' lead'+(added===1?'':'s')];
+  if(won)bits.push(won+' already won 🎉');
+  if(dupes)bits.push(dupes+' duplicates skipped');
+  if(noPhone)bits.push(noPhone+' had no phone (skipped)');
+  toast(bits.join(' · '));
 };
 
 /* =================== backup / export =================== */
