@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Forgecraft CRM — Leads</title>
+<style>
+:root{
+  --green:#1C382A; --green-dk:#142A1F; --gold:#D4A846; --cream:#F5F3ED;
+  --ink:#181C18; --panel:#fbfaf7; --line:#e7e3da; --muted:#8a857c;
+  --red:#b4452f; --red-bg:#f7e8e4; --blue:#2f5ab4; --blue-bg:#e7edf9;
+  --amber:#9a6d10; --amber-bg:#f6ecd4; --grn:#2e7d4f; --grn-bg:#e2f0e7;
+  --purple:#6a4fb4; --purple-bg:#ece7f9; --gray-bg:#eceae3;
+  --radius:14px; --shadow:0 6px 24px #0002;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--cream); color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:15px; line-height:1.45;
+  padding-bottom:90px;
+}
+button{font-family:inherit; cursor:pointer}
+input,select,textarea{font-family:inherit; font-size:15px}
+
+/* ---------- top bar ---------- */
+.topbar{
+  position:sticky; top:0; z-index:30;
+  background:var(--green); color:#fff;
+  padding:calc(10px + env(safe-area-inset-top)) 14px 10px;
+  display:flex; align-items:center; gap:10px;
+}
+.topbar .logo{font-weight:800; letter-spacing:.4px; font-size:17px}
+.topbar .logo span{color:var(--gold)}
+.topbar .sub{font-size:12px; opacity:.75; margin-top:1px}
+.topbar .spacer{flex:1}
+.iconbtn{
+  background:#ffffff1c; color:#fff; border:none; border-radius:10px;
+  padding:8px 12px; font-size:14px; font-weight:600;
+}
+.iconbtn:active{background:#ffffff33}
+
+/* ---------- stats strip ---------- */
+.stats{
+  display:grid; grid-template-columns:repeat(5,1fr); gap:8px;
+  padding:12px 14px 4px; max-width:1000px; margin:0 auto;
+}
+.stat{
+  background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:8px 6px; text-align:center; cursor:pointer;
+}
+.stat b{display:block; font-size:19px; line-height:1.2}
+.stat span{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px}
+.stat.hot b{color:var(--red)}
+.stat.won b{color:var(--grn)}
+
+/* ---------- search + chips ---------- */
+.toolrow{max-width:1000px; margin:0 auto; padding:10px 14px 0}
+.search{
+  width:100%; padding:10px 14px; border:1px solid var(--line); border-radius:12px;
+  background:#fff; outline:none;
+}
+.search:focus{border-color:var(--green)}
+.chips{
+  display:flex; gap:8px; overflow-x:auto; padding:10px 14px;
+  max-width:1000px; margin:0 auto; -webkit-overflow-scrolling:touch;
+  scrollbar-width:none;
+}
+.chips::-webkit-scrollbar{display:none}
+.chip{
+  border:1px solid var(--line); background:#fff; border-radius:999px;
+  padding:7px 14px; font-size:13.5px; font-weight:600; white-space:nowrap; color:var(--ink);
+}
+.chip.on{background:var(--green); color:#fff; border-color:var(--green)}
+.chip .n{opacity:.65; font-weight:500; margin-left:3px}
+
+/* ---------- list ---------- */
+.list{max-width:1000px; margin:0 auto; padding:2px 14px 20px}
+.sechead{
+  font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.6px;
+  color:var(--muted); margin:16px 2px 8px;
+}
+.card{
+  background:#fff; border:1px solid var(--line); border-radius:var(--radius);
+  padding:12px 14px; margin-bottom:10px; cursor:pointer;
+  display:flex; gap:10px; align-items:center;
+}
+.card:active{background:var(--panel)}
+.card .main{flex:1; min-width:0}
+.card .nm{font-weight:700; font-size:15.5px; display:flex; align-items:center; gap:8px; flex-wrap:wrap}
+.card .meta{font-size:12.5px; color:var(--muted); margin-top:2px}
+.card .meta b{color:var(--ink); font-weight:600}
+.card .warn{color:var(--red); font-weight:700}
+.badge{
+  font-size:11px; font-weight:700; padding:2.5px 9px; border-radius:999px; white-space:nowrap;
+}
+.b-new{background:var(--blue-bg); color:var(--blue)}
+.b-no_answer{background:var(--amber-bg); color:var(--amber)}
+.b-follow_up{background:var(--purple-bg); color:var(--purple)}
+.b-won{background:var(--grn-bg); color:var(--grn)}
+.b-nurture{background:var(--gold); color:var(--green-dk)}
+.b-lost{background:var(--gray-bg); color:var(--muted)}
+.qa{display:flex; gap:8px}
+.qbtn{
+  width:42px; height:42px; border-radius:12px; border:1px solid var(--line);
+  background:var(--panel); font-size:18px; display:flex; align-items:center; justify-content:center;
+  text-decoration:none; flex:none;
+}
+.qbtn.call{background:var(--green); border-color:var(--green)}
+.qbtn.wa{background:#25D366; border-color:#25D366}
+.empty{
+  text-align:center; color:var(--muted); padding:44px 20px;
+}
+.empty .big{font-size:38px; margin-bottom:8px}
+.empty button{margin-top:14px}
+
+/* ---------- buttons ---------- */
+.btn{
+  border:none; border-radius:12px; padding:11px 18px; font-weight:700; font-size:14.5px;
+}
+.btn.primary{background:var(--green); color:#fff}
+.btn.gold{background:var(--gold); color:var(--green-dk)}
+.btn.ghost{background:#fff; border:1px solid var(--line); color:var(--ink)}
+.btn.danger{background:var(--red-bg); color:var(--red)}
+.btn.sm{padding:8px 12px; font-size:13px; border-radius:10px}
+.btn:disabled{opacity:.45; cursor:default}
+.btn:active{filter:brightness(.93)}
+
+/* ---------- FAB ---------- */
+.fab{
+  position:fixed; right:16px; bottom:calc(18px + env(safe-area-inset-bottom)); z-index:25;
+  background:var(--gold); color:var(--green-dk); border:none; border-radius:999px;
+  padding:14px 22px; font-size:15.5px; font-weight:800; box-shadow:var(--shadow);
+}
+
+/* ---------- sheet / modal ---------- */
+.overlay{
+  position:fixed; inset:0; background:#181c1877; z-index:40; display:none;
+  align-items:flex-end; justify-content:center;
+}
+.overlay.open{display:flex}
+.sheet{
+  background:var(--cream); width:100%; max-width:640px; max-height:92vh; max-height:92dvh;
+  border-radius:20px 20px 0 0; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding:6px 18px calc(24px + env(safe-area-inset-bottom));
+  animation:up .18s ease;
+}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@media(min-width:700px){
+  .overlay{align-items:center; padding:24px}
+  .sheet{border-radius:20px; max-height:88vh}
+}
+.grab{width:44px; height:4px; border-radius:4px; background:#0002; margin:8px auto 4px}
+.sheet h2{font-size:19px; margin:12px 0 4px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+.sheet h3{font-size:12.5px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin:20px 0 8px}
+.sheet .close{position:sticky; top:8px; float:right; z-index:5}
+.frow{margin-bottom:12px}
+.frow label{display:block; font-size:12.5px; font-weight:700; color:var(--muted); margin-bottom:4px}
+.frow input,.frow select,.frow textarea{
+  width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:10px; background:#fff; outline:none;
+}
+.frow textarea{min-height:74px; resize:vertical}
+.frow input:focus,.frow textarea:focus,.frow select:focus{border-color:var(--green)}
+.rowbtns{display:flex; gap:8px; flex-wrap:wrap; margin:8px 0}
+.bigacts{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:12px 0}
+.bigacts a{
+  text-decoration:none; text-align:center; padding:13px; border-radius:12px;
+  font-weight:800; font-size:15px; color:#fff;
+}
+.bigacts .callbtn{background:var(--green)}
+.bigacts .wabtn{background:#25D366}
+.optchips{display:flex; gap:8px; flex-wrap:wrap}
+.optchip{
+  border:1.5px solid var(--line); background:#fff; border-radius:999px;
+  padding:7px 13px; font-size:13px; font-weight:600;
+}
+.optchip.on{border-color:var(--green); background:var(--green); color:#fff}
+.timeline{margin:6px 0 0; padding:0; list-style:none}
+.timeline li{
+  padding:8px 0 8px 18px; border-left:2px solid var(--line); margin-left:6px; position:relative;
+  font-size:13.5px;
+}
+.timeline li::before{
+  content:""; width:8px; height:8px; border-radius:50%; background:var(--gold);
+  position:absolute; left:-5px; top:14px;
+}
+.timeline .ts{color:var(--muted); font-size:11.5px}
+.note{font-size:12.5px; color:var(--muted); margin:6px 0}
+.hr{border:none; border-top:1px solid var(--line); margin:18px 0}
+
+/* ---------- toast ---------- */
+.toast{
+  position:fixed; left:50%; transform:translateX(-50%);
+  bottom:calc(84px + env(safe-area-inset-bottom)); z-index:60;
+  background:var(--green-dk); color:#fff; padding:10px 18px; border-radius:999px;
+  font-size:14px; font-weight:600; box-shadow:var(--shadow); display:none; max-width:88vw; text-align:center;
+}
+.toast.show{display:block; animation:up .18s ease}
+
+/* ---------- broadcast list ---------- */
+.bl{background:#fff; border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px; display:flex; align-items:center; gap:10px}
+.bl.sent{opacity:.55}
+.bl .who{flex:1; min-width:0}
+.bl .who b{display:block; font-size:14px}
+.bl .who span{font-size:12px; color:var(--muted)}
+
+/* ---------- import table ---------- */
+.maprow{display:grid; grid-template-columns:110px 1fr; gap:8px; align-items:center; margin-bottom:8px}
+.maprow span{font-size:13px; font-weight:700}
+.preview{font-size:12px; color:var(--muted); background:#fff; border:1px solid var(--line); border-radius:10px; padding:8px 10px; margin-top:6px; overflow-x:auto; white-space:nowrap}
+
+/* ---------- desktop rows ---------- */
+@media(min-width:900px){
+  .card{padding:13px 18px}
+  body{font-size:15px}
+}
+.filedrop{display:none}
+a.plain{color:var(--green); font-weight:700}
+.banner{
+  max-width:972px; margin:10px auto 0; background:var(--amber-bg); color:var(--amber);
+  border-radius:12px; padding:10px 14px; font-size:13.5px; font-weight:600; cursor:pointer;
+  display:none;
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div>
+    <div class="logo">FORGE<span>CRAFT</span> CRM</div>
+    <div class="sub">Beginner 3D Printing Session · leads</div>
+  </div>
+  <div class="spacer"></div>
+  <button class="iconbtn" id="btnBroadcast">📣 Blast</button>
+  <button class="iconbtn" id="btnMenu">☰</button>
+</div>
+
+<div class="banner" id="backupBanner">💾 It's been a while since your last backup — tap to export one now (data lives only in this browser).</div>
+
+<div class="stats" id="stats"></div>
+
+<div class="toolrow">
+  <input class="search" id="search" type="search" placeholder="Search name or phone…">
+</div>
+<div class="chips" id="chips"></div>
+<div class="list" id="list"></div>
+
+<button class="fab" id="btnAdd">＋ Add lead</button>
+
+<!-- ============ lead detail sheet ============ -->
+<div class="overlay" id="ovDetail"><div class="sheet" id="shDetail"></div></div>
+
+<!-- ============ add/edit sheet ============ -->
+<div class="overlay" id="ovEdit"><div class="sheet">
+  <div class="grab"></div>
+  <button class="btn ghost sm close" onclick="closeOv('ovEdit')">✕ Close</button>
+  <h2 id="editTitle">Add lead</h2>
+  <div class="frow"><label>Name *</label><input id="eName" autocomplete="off"></div>
+  <div class="frow"><label>Phone (WhatsApp) *</label><input id="ePhone" inputmode="tel" placeholder="9123 4567" autocomplete="off"></div>
+  <div class="frow"><label>Email</label><input id="eEmail" inputmode="email" autocomplete="off"></div>
+  <div class="frow"><label>Source</label>
+    <select id="eSource"><option value="meta">Meta Ads</option><option value="manual" selected>Manual / walk-in</option><option value="referral">Referral</option><option value="other">Other</option></select>
+  </div>
+  <div class="frow"><label>Notes (kid's age, preferred slot, etc.)</label><textarea id="eNotes"></textarea></div>
+  <div class="rowbtns">
+    <button class="btn primary" id="btnSaveLead">Save lead</button>
+    <button class="btn ghost" onclick="closeOv('ovEdit')">Cancel</button>
+  </div>
+</div></div>
+
+<!-- ============ menu sheet ============ -->
+<div class="overlay" id="ovMenu"><div class="sheet">
+  <div class="grab"></div>
+  <button class="btn ghost sm close" onclick="closeOv('ovMenu')">✕ Close</button>
+  <h2>Data & tools</h2>
+  <h3>Import leads</h3>
+  <div class="rowbtns">
+    <button class="btn primary" onclick="document.getElementById('csvFile').click()">📥 Import Meta Ads CSV</button>
+    <input type="file" id="csvFile" class="filedrop" accept=".csv,text/csv">
+  </div>
+  <div class="note">In Meta: Ads Manager (or Leads Center) → your lead form → <b>Download leads (CSV)</b>, then import it here. Duplicate phone numbers are skipped automatically, so you can re-import the full file every few days.</div>
+  <h3>Backup & move between devices</h3>
+  <div class="rowbtns">
+    <button class="btn gold" onclick="exportJSON()">💾 Export backup</button>
+    <button class="btn ghost" onclick="document.getElementById('jsonFile').click()">📤 Restore / merge backup</button>
+    <input type="file" id="jsonFile" class="filedrop" accept=".json,application/json">
+    <button class="btn ghost" onclick="exportCSV()">⬇️ Export leads CSV</button>
+  </div>
+  <div class="note">⚠️ Leads are stored <b>in this browser only</b> (nothing is uploaded anywhere). To use both phone and laptop: export a backup on one device and restore it on the other — restore <b>merges</b>, keeping whichever copy of each lead is most recently updated, so you won't lose anything.</div>
+  <h3>WhatsApp message templates</h3>
+  <div id="tplList"></div>
+  <div class="rowbtns"><button class="btn ghost sm" onclick="addTemplate()">＋ New template</button></div>
+  <div class="note">Use <b>{name}</b> in a template and it's replaced with the lead's first name when sending.</div>
+  <h3>Danger zone</h3>
+  <div class="rowbtns"><button class="btn danger sm" onclick="wipeAll()">Delete ALL data</button></div>
+</div></div>
+
+<!-- ============ import mapping sheet ============ -->
+<div class="overlay" id="ovImport"><div class="sheet">
+  <div class="grab"></div>
+  <button class="btn ghost sm close" onclick="closeOv('ovImport')">✕ Close</button>
+  <h2>Import CSV</h2>
+  <div class="note" id="impInfo"></div>
+  <div id="impMap"></div>
+  <div class="frow" style="margin-top:10px">
+    <label><input type="checkbox" id="impExtras" checked style="width:auto;margin-right:6px">Copy other columns (e.g. form questions like kid's age) into notes</label>
+  </div>
+  <div class="preview" id="impPreview"></div>
+  <div class="rowbtns" style="margin-top:14px">
+    <button class="btn primary" id="btnDoImport">Import</button>
+    <button class="btn ghost" onclick="closeOv('ovImport')">Cancel</button>
+  </div>
+</div></div>
+
+<!-- ============ broadcast sheet ============ -->
+<div class="overlay" id="ovBroadcast"><div class="sheet">
+  <div class="grab"></div>
+  <button class="btn ghost sm close" onclick="closeOv('ovBroadcast')">✕ Close</button>
+  <h2>📣 WhatsApp blast</h2>
+  <div class="note">Pick who to message, write it once, then tap Send on each lead — WhatsApp opens with the message personalised and ready, you just hit send. (WhatsApp doesn't allow true bulk-send from a website, so it's one tap per person.)</div>
+  <h3>Send to</h3>
+  <div class="optchips" id="bSeg"></div>
+  <h3>Message</h3>
+  <div class="frow">
+    <select id="bTpl"><option value="">Start from a template…</option></select>
+  </div>
+  <div class="frow"><textarea id="bMsg" placeholder="Hi {name}! This happened last weekend at Forgecraft… 🖨️"></textarea></div>
+  <div class="rowbtns">
+    <button class="btn primary" id="btnBuildList">Build send list</button>
+    <button class="btn ghost sm" onclick="copyNumbers()">Copy all numbers</button>
+  </div>
+  <div id="bList" style="margin-top:12px"></div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+/* =================== state =================== */
+const LS_KEY='forgecraft_crm_v1';
+const STATUSES={
+  new:{label:'To call',emoji:'📞'},
+  no_answer:{label:'No answer',emoji:'📵'},
+  follow_up:{label:'Follow up',emoji:'📅'},
+  won:{label:'Won',emoji:'🎉'},
+  nurture:{label:'Nurture',emoji:'🌱'},
+  lost:{label:'Lost',emoji:'✖️'},
+};
+const OBJECTIONS=['Price','Timing / schedule','Location too far','Kid too young','Need to ask partner','Still deciding','Just enquiring','Other'];
+const DEFAULT_TEMPLATES=[
+ {id:'t1',name:'Missed call intro',text:"Hi {name}! 👋 This is Forgecraft — we tried calling about your enquiry for our Beginner 3D Printing Session (1 day, 2.5 hrs). When's a good time to chat? 🖨️"},
+ {id:'t2',name:'Weekend recap (nurture)',text:"Hi {name}! 👋 Quick share — this happened last weekend at Forgecraft: our young makers designed and 3D-printed their own creations in one 2.5-hr session 🖨️✨ We've got new slots open — want me to save one for your kid?"},
+ {id:'t3',name:'Follow up nudge',text:"Hi {name}, just checking in on the Beginner 3D Printing Session we spoke about 😊 Slots for this weekend are filling up — shall I reserve one?"},
+];
+
+let state=load();
+function load(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);
+    if(raw){const s=JSON.parse(raw); s.leads=s.leads||[]; s.templates=s.templates&&s.templates.length?s.templates:DEFAULT_TEMPLATES.slice(); return s;}
+  }catch(e){}
+  return {v:1,leads:[],templates:DEFAULT_TEMPLATES.slice(),lastBackupAt:0};
+}
+function save(){localStorage.setItem(LS_KEY,JSON.stringify(state));}
+
+/* =================== utils =================== */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=> (crypto.randomUUID?crypto.randomUUID():'id'+Date.now()+Math.random().toString(36).slice(2));
+function normPhone(p){
+  let d=String(p||'').replace(/\D/g,'');
+  if(d.length===8) d='65'+d;                 // bare SG number
+  if(d.startsWith('0065')) d=d.slice(2);
+  return d;
+}
+function fmtPhone(d){ if(d.startsWith('65')&&d.length===10) return '+65 '+d.slice(2,6)+' '+d.slice(6); return '+'+d; }
+function firstName(n){return String(n||'').trim().split(/\s+/)[0]||'there';}
+const DAY=86400000;
+function startOfDay(t){const d=new Date(t);d.setHours(0,0,0,0);return d.getTime();}
+function today0(){return startOfDay(Date.now());}
+function fmtDate(t){
+  if(!t) return '';
+  const d0=startOfDay(t), n0=today0();
+  if(d0===n0) return 'today';
+  if(d0===n0+DAY) return 'tomorrow';
+  if(d0===n0-DAY) return 'yesterday';
+  return new Date(t).toLocaleDateString('en-SG',{day:'numeric',month:'short'});
+}
+function fmtDT(t){return new Date(t).toLocaleDateString('en-SG',{day:'numeric',month:'short'})+' '+new Date(t).toLocaleTimeString('en-SG',{hour:'numeric',minute:'2-digit'});}
+function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
+function addLog(l,type,text){l.log=l.log||[];l.log.push({ts:Date.now(),type,text});l.lastActionAt=Date.now();}
+function waLink(l,msg){return 'https://wa.me/'+l.phone+(msg?'?text='+encodeURIComponent(msg.replaceAll('{name}',firstName(l.name))):'');}
+function telLink(l){return 'tel:+'+l.phone;}
+
+/* =================== list rendering =================== */
+let activeTab='today', query='';
+const TABS=[
+  ['today','🔥 Today'],['all','All'],['new','To call'],['no_answer','No answer'],
+  ['follow_up','Follow up'],['nurture','Nurture'],['won','Won'],['lost','Lost'],
+];
+
+function counts(){
+  const c={all:state.leads.length,new:0,no_answer:0,follow_up:0,won:0,nurture:0,lost:0,due:0};
+  for(const l of state.leads){
+    c[l.status]=(c[l.status]||0)+1;
+    if(l.status==='follow_up'&&l.followUpAt&&startOfDay(l.followUpAt)<=today0()) c.due++;
+  }
+  return c;
+}
+
+function todayQueue(){
+  const n0=today0();
+  const overdue=[],fresh=[],retry=[];
+  for(const l of state.leads){
+    if(l.status==='follow_up'&&l.followUpAt&&startOfDay(l.followUpAt)<=n0) overdue.push(l);
+    else if(l.status==='new') fresh.push(l);
+    else if(l.status==='no_answer'&&startOfDay(l.lastCallAt||0)<n0) retry.push(l);
+  }
+  overdue.sort((a,b)=>(a.followUpAt||0)-(b.followUpAt||0));
+  fresh.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+  retry.sort((a,b)=>(a.lastCallAt||0)-(b.lastCallAt||0));
+  return {overdue,fresh,retry};
+}
+
+function render(){
+  save();
+  // stats
+  const c=counts();
+  const closed=c.won+c.lost+c.nurture;
+  const rate=closed?Math.round(c.won/closed*100):0;
+  $('stats').innerHTML=`
+    <div class="stat ${c.due?'hot':''}" onclick="setTab('today')"><b>${c.due+ c.new}</b><span>Due now</span></div>
+    <div class="stat" onclick="setTab('new')"><b>${c.new}</b><span>To call</span></div>
+    <div class="stat" onclick="setTab('follow_up')"><b>${c.follow_up}</b><span>Follow up</span></div>
+    <div class="stat won" onclick="setTab('won')"><b>${c.won}</b><span>Won</span></div>
+    <div class="stat" onclick="setTab('all')"><b>${rate}%</b><span>Close rate</span></div>`;
+  // chips
+  $('chips').innerHTML=TABS.map(([k,lbl])=>{
+    const n=k==='today'?(c.due+c.new):(c[k]??0);
+    return `<button class="chip ${activeTab===k?'on':''}" onclick="setTab('${k}')">${lbl}<span class="n">${n}</span></button>`;
+  }).join('');
+  // backup nag
+  $('backupBanner').style.display=(state.leads.length>4&&Date.now()-(state.lastBackupAt||0)>7*DAY)?'block':'none';
+
+  // list
+  const el=$('list');
+  const match=l=>!query||l.name.toLowerCase().includes(query)||l.phone.includes(query.replace(/\D/g,'')||'§');
+  if(activeTab==='today'&&!query){
+    const q=todayQueue();
+    if(!q.overdue.length&&!q.fresh.length&&!q.retry.length){
+      el.innerHTML=emptyHtml(state.leads.length?'🎉':'👋',
+        state.leads.length?'All caught up! No calls due right now.':'No leads yet.',
+        state.leads.length?'':'Import your Meta Ads CSV or add a lead to get started.',
+        !state.leads.length);
+      return;
+    }
+    el.innerHTML=
+      (q.overdue.length?`<div class="sechead">📅 Follow-ups due (${q.overdue.length})</div>`+q.overdue.map(cardHtml).join(''):'')+
+      (q.fresh.length?`<div class="sechead">🆕 New — never called (${q.fresh.length})</div>`+q.fresh.map(cardHtml).join(''):'')+
+      (q.retry.length?`<div class="sechead">📵 No answer — try again (${q.retry.length})</div>`+q.retry.map(cardHtml).join(''):'');
+    return;
+  }
+  let ls=state.leads.filter(l=>(activeTab==='all'||activeTab==='today'||l.status===activeTab)&&match(l));
+  if(activeTab==='follow_up') ls.sort((a,b)=>(a.followUpAt||9e15)-(b.followUpAt||9e15));
+  else ls.sort((a,b)=>(b.lastActionAt||b.createdAt||0)-(a.lastActionAt||a.createdAt||0));
+  el.innerHTML=ls.length?ls.map(cardHtml).join(''):
+    emptyHtml('🔍','Nothing here'+(query?' for “'+esc(query)+'”':'.'),'',!state.leads.length);
+}
+function emptyHtml(big,line1,line2,showImport){
+  return `<div class="empty"><div class="big">${big}</div><div><b>${line1}</b></div><div>${esc(line2||'')}</div>
+  ${showImport?`<button class="btn primary" onclick="openMenu()">📥 Import Meta CSV</button> <button class="btn gold" onclick="openAdd()">＋ Add lead</button>`:''}</div>`;
+}
+function cardHtml(l){
+  const s=STATUSES[l.status]||STATUSES.new;
+  const bits=[];
+  bits.push((l.source==='meta'?'Meta':l.source==='referral'?'Referral':l.source==='manual'?'Manual':'Lead')+' · in '+fmtDate(l.createdAt));
+  if(l.attempts) bits.push(l.attempts+'× called');
+  if(l.status==='follow_up'&&l.followUpAt){
+    const od=startOfDay(l.followUpAt)<today0();
+    bits.push((od?'<span class="warn">overdue — ':'follow up ')+fmtDate(l.followUpAt)+(od?'</span>':''));
+  }
+  if(l.objection) bits.push('💬 '+esc(l.objection));
+  return `<div class="card" onclick="openDetail('${l.id}')">
+    <div class="main">
+      <div class="nm">${esc(l.name)} <span class="badge b-${l.status}">${s.emoji} ${s.label}</span></div>
+      <div class="meta">${fmtPhone(l.phone)} · ${bits.join(' · ')}</div>
+    </div>
+    <div class="qa" onclick="event.stopPropagation()">
+      <a class="qbtn call" href="${telLink(l)}" onclick="callTapped('${l.id}')" title="Call">📞</a>
+      <a class="qbtn wa" href="${waLink(l,'')}" target="_blank" rel="noopener" onclick="waTapped('${l.id}')" title="WhatsApp">💬</a>
+    </div>
+  </div>`;
+}
+function setTab(t){activeTab=t;render();window.scrollTo({top:0});}
+$('search').addEventListener('input',e=>{query=e.target.value.trim().toLowerCase();render();});
+
+/* =================== call / wa tap tracking =================== */
+let pendingCall=null;
+function callTapped(id){
+  const l=byId(id); if(!l)return;
+  pendingCall={id,ts:Date.now()};
+}
+function waTapped(id){
+  const l=byId(id); if(!l)return;
+  addLog(l,'wa','Opened WhatsApp chat');
+  save();
+}
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&pendingCall&&Date.now()-pendingCall.ts<4*3600e3){
+    const id=pendingCall.id; pendingCall=null;
+    openDetail(id,true);
+    toast('How did the call go? Log it 👇');
+  }
+});
+function byId(id){return state.leads.find(l=>l.id===id);}
+
+/* =================== detail sheet =================== */
+let curId=null;
+function openDetail(id,highlight){
+  curId=id; renderDetail(highlight);
+  openOv('ovDetail');
+}
+function renderDetail(highlight){
+  const l=byId(curId); if(!l){closeOv('ovDetail');return;}
+  const s=STATUSES[l.status];
+  const logHtml=(l.log||[]).slice().reverse().map(e=>
+    `<li>${esc(e.text)}<div class="ts">${fmtDT(e.ts)}</div></li>`).join('');
+  $('shDetail').innerHTML=`
+  <div class="grab"></div>
+  <button class="btn ghost sm close" onclick="closeOv('ovDetail')">✕ Close</button>
+  <h2>${esc(l.name)} <span class="badge b-${l.status}">${s.emoji} ${s.label}</span></h2>
+  <div class="note">${fmtPhone(l.phone)}${l.email?' · '+esc(l.email):''} · came in ${fmtDate(l.createdAt)}${l.attempts?' · called '+l.attempts+'×':''}</div>
+  <div class="bigacts">
+    <a class="callbtn" href="${telLink(l)}" onclick="callTapped('${l.id}')">📞 Call</a>
+    <a class="wabtn" href="${waLink(l,'')}" target="_blank" rel="noopener" onclick="waTapped('${l.id}')">💬 WhatsApp</a>
+  </div>
+
+  <h3 ${highlight?'style="color:var(--red)"':''}>Log a call ${highlight?'← how did it go?':''}</h3>
+  <div class="rowbtns">
+    <button class="btn primary" onclick="logPicked()">✅ Picked up</button>
+    <button class="btn ghost" onclick="logNoAnswer()">📵 No answer</button>
+  </div>
+  <div id="outcomeBox"></div>
+
+  <h3>Follow-up date</h3>
+  <div class="rowbtns">
+    <button class="btn ghost sm" onclick="setFU(1)">Tomorrow</button>
+    <button class="btn ghost sm" onclick="setFU(3)">+3 days</button>
+    <button class="btn ghost sm" onclick="setFU(7)">+1 week</button>
+    <input type="date" id="fuDate" style="padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff"
+      value="${l.followUpAt?new Date(l.followUpAt).toISOString().slice(0,10):''}" onchange="setFUDate(this.value)">
+    ${l.followUpAt?`<button class="btn ghost sm" onclick="setFUDate('')">Clear</button>`:''}
+  </div>
+
+  <h3>Status</h3>
+  <div class="optchips">${Object.entries(STATUSES).map(([k,v])=>
+    `<button class="optchip ${l.status===k?'on':''}" onclick="setStatus('${k}')">${v.emoji} ${v.label}</button>`).join('')}</div>
+
+  <h3>Objection</h3>
+  <div class="optchips">${OBJECTIONS.map(o=>
+    `<button class="optchip ${l.objection===o||(o==='Other'&&l.objection&&!OBJECTIONS.includes(l.objection))?'on':''}" onclick="setObjection('${o}')">${o}</button>`).join('')}</div>
+
+  <h3>Notes</h3>
+  <div class="frow"><textarea id="dNotes" oninput="noteTimer(this.value)">${esc(l.notes||'')}</textarea></div>
+
+  <h3>History</h3>
+  <ul class="timeline">${logHtml||'<li>No activity yet<div class="ts">—</div></li>'}</ul>
+  <hr class="hr">
+  <div class="rowbtns">
+    <button class="btn ghost sm" onclick="editLead()">✏️ Edit details</button>
+    <button class="btn danger sm" onclick="delLead()">🗑 Delete lead</button>
+  </div>`;
+}
+function logNoAnswer(){
+  const l=byId(curId); if(!l)return;
+  l.attempts=(l.attempts||0)+1; l.lastCallAt=Date.now();
+  if(l.status==='new'||l.status==='no_answer') l.status='no_answer';
+  addLog(l,'call','📵 Called — no answer (attempt '+l.attempts+')');
+  render(); renderDetail();
+  const tpl=state.templates.find(t=>t.id==='t1')||state.templates[0];
+  $('outcomeBox').innerHTML=`<div class="note">Logged attempt #${l.attempts}. ${tpl?`Want to drop a WhatsApp so they know who called?`:''}</div>
+  ${tpl?`<div class="rowbtns"><a class="btn gold sm" style="text-decoration:none" target="_blank" rel="noopener" href="${waLink(l,tpl.text)}" onclick="waTapped('${l.id}')">💬 Send “${esc(tpl.name)}”</a></div>`:''}`;
+  toast('Logged: no answer (#'+l.attempts+')');
+}
+function logPicked(){
+  const l=byId(curId); if(!l)return;
+  l.attempts=(l.attempts||0)+1; l.lastCallAt=Date.now();
+  addLog(l,'call','✅ Called — picked up');
+  save();
+  $('outcomeBox').innerHTML=`
+  <div class="note">Nice! What was the outcome?</div>
+  <div class="rowbtns">
+    <button class="btn primary" onclick="outcome('won')">🎉 Closed the deal</button>
+    <button class="btn gold" onclick="outcome('follow_up')">📅 Follow up later</button>
+    <button class="btn ghost" onclick="outcome('nurture')">🌱 Not now — nurture</button>
+    <button class="btn ghost" onclick="outcome('lost')">✖️ Not interested</button>
+  </div>`;
+}
+function outcome(st){
+  const l=byId(curId); if(!l)return;
+  l.status=st;
+  if(st==='won'){l.wonAt=Date.now(); l.followUpAt=null; addLog(l,'status','🎉 Deal closed — signed up!'); toast('🎉 Closed! Nice one.');}
+  if(st==='follow_up'){addLog(l,'status','📅 Spoke — follow up needed');}
+  if(st==='nurture'){addLog(l,'status','🌱 Not now — moved to nurture list');}
+  if(st==='lost'){l.followUpAt=null; addLog(l,'status','✖️ Not interested — marked lost');}
+  render(); renderDetail();
+  if(st==='follow_up'){toast('Set a follow-up date 👇'); document.getElementById('fuDate').focus();}
+  if(st==='nurture'||st==='lost') toast('Tag the objection so you know why 👇');
+}
+function setStatus(st){
+  const l=byId(curId); if(!l||l.status===st)return;
+  l.status=st; if(st==='won')l.wonAt=Date.now();
+  addLog(l,'status','Status → '+STATUSES[st].label);
+  render(); renderDetail();
+}
+function setObjection(o){
+  const l=byId(curId); if(!l)return;
+  if(o==='Other'){const t=prompt('What was the objection?',OBJECTIONS.includes(l.objection)?'':l.objection||''); if(t===null)return; o=t.trim();}
+  l.objection=(l.objection===o)?'':o;
+  if(l.objection) addLog(l,'note','Objection: '+l.objection);
+  render(); renderDetail();
+}
+function setFU(days){
+  const l=byId(curId); if(!l)return;
+  l.followUpAt=today0()+days*DAY+9*3600e3;
+  if(l.status!=='won'&&l.status!=='lost') l.status='follow_up';
+  addLog(l,'status','Follow-up set for '+fmtDate(l.followUpAt));
+  render(); renderDetail(); toast('Follow up '+fmtDate(l.followUpAt));
+}
+function setFUDate(v){
+  const l=byId(curId); if(!l)return;
+  if(!v){l.followUpAt=null; render(); renderDetail(); return;}
+  l.followUpAt=new Date(v+'T09:00').getTime();
+  if(l.status!=='won'&&l.status!=='lost') l.status='follow_up';
+  addLog(l,'status','Follow-up set for '+fmtDate(l.followUpAt));
+  render(); renderDetail();
+}
+let _nt=null;
+function noteTimer(v){
+  clearTimeout(_nt);
+  _nt=setTimeout(()=>{const l=byId(curId); if(l){l.notes=v; l.lastActionAt=Date.now(); save();}},500);
+}
+function delLead(){
+  const l=byId(curId); if(!l)return;
+  if(!confirm('Delete '+l.name+'? This cannot be undone.'))return;
+  state.leads=state.leads.filter(x=>x.id!==l.id);
+  closeOv('ovDetail'); render(); toast('Deleted');
+}
+
+/* =================== add / edit =================== */
+let editId=null;
+function openAdd(){
+  editId=null; $('editTitle').textContent='Add lead';
+  $('eName').value=$('ePhone').value=$('eEmail').value=$('eNotes').value='';
+  $('eSource').value='manual';
+  openOv('ovEdit'); setTimeout(()=>$('eName').focus(),150);
+}
+function editLead(){
+  const l=byId(curId); if(!l)return;
+  editId=l.id; $('editTitle').textContent='Edit lead';
+  $('eName').value=l.name; $('ePhone').value=fmtPhone(l.phone);
+  $('eEmail').value=l.email||''; $('eSource').value=l.source||'other'; $('eNotes').value=l.notes||'';
+  closeOv('ovDetail'); openOv('ovEdit');
+}
+$('btnSaveLead').onclick=()=>{
+  const name=$('eName').value.trim(), phone=normPhone($('ePhone').value);
+  if(!name){toast('Name is required');return;}
+  if(phone.length<8){toast('That phone number looks too short');return;}
+  if(editId){
+    const l=byId(editId); if(!l)return;
+    Object.assign(l,{name,phone,email:$('eEmail').value.trim(),source:$('eSource').value,notes:$('eNotes').value});
+    l.lastActionAt=Date.now();
+    closeOv('ovEdit'); render(); openDetail(l.id); toast('Saved');
+  }else{
+    if(state.leads.some(x=>x.phone===phone)){toast('A lead with this number already exists');return;}
+    const l={id:uid(),name,phone,email:$('eEmail').value.trim(),source:$('eSource').value,
+      createdAt:Date.now(),lastActionAt:Date.now(),status:'new',objection:'',followUpAt:null,
+      notes:$('eNotes').value,attempts:0,log:[]};
+    addLog(l,'import','Lead added ('+l.source+')');
+    state.leads.push(l);
+    closeOv('ovEdit'); render(); toast('Lead added');
+  }
+};
+$('btnAdd').onclick=openAdd;
+
+/* =================== CSV import =================== */
+function parseCSV(text){
+  text=text.replace(/^﻿/,'');
+  const rows=[]; let row=[],cur='',inQ=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(inQ){
+      if(ch==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else inQ=false; }
+      else cur+=ch;
+    }else{
+      if(ch==='"') inQ=true;
+      else if(ch===','){row.push(cur);cur='';}
+      else if(ch==='\n'||ch==='\r'){ if(ch==='\r'&&text[i+1]==='\n')i++; row.push(cur);cur=''; if(row.length>1||row[0]!=='')rows.push(row); row=[]; }
+      else cur+=ch;
+    }
+  }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
+  return rows;
+}
+let imp=null;
+$('csvFile').addEventListener('change',e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    const rows=parseCSV(r.result);
+    if(rows.length<2){toast('CSV appears empty');return;}
+    imp={headers:rows[0].map(h=>h.trim()),rows:rows.slice(1)};
+    closeOv('ovMenu'); showImportMap();
+  };
+  r.readAsText(f);
+});
+function guessCol(cands){
+  const hs=imp.headers.map(h=>h.toLowerCase());
+  for(const c of cands){const i=hs.findIndex(h=>h.includes(c)); if(i>=0)return i;}
+  return -1;
+}
+function showImportMap(){
+  const fields=[['name','Name',['full_name','full name','name']],
+                ['phone','Phone',['phone']],
+                ['email','Email',['email']],
+                ['created','Date in',['created_time','created','date']],
+                ['ad','Ad / campaign',['ad_name','adset','campaign']]];
+  $('impInfo').textContent=imp.rows.length+' rows found. Check the column matching below:';
+  $('impMap').innerHTML=fields.map(([k,lbl,cands])=>{
+    const g=guessCol(cands);
+    return `<div class="maprow"><span>${lbl}</span><select id="map_${k}">
+      <option value="-1">— none —</option>
+      ${imp.headers.map((h,i)=>`<option value="${i}" ${i===g?'selected':''}>${esc(h)}</option>`).join('')}
+    </select></div>`;
+  }).join('');
+  $('impPreview').innerHTML=imp.rows.slice(0,3).map(r=>esc(r.join(' | '))).join('<br>');
+  openOv('ovImport');
+}
+$('btnDoImport').onclick=()=>{
+  const gi=k=>parseInt($('map_'+k).value,10);
+  const iN=gi('name'), iP=gi('phone'), iE=gi('email'), iC=gi('created'), iA=gi('ad');
+  if(iP<0){toast('Pick the phone column — it\'s required');return;}
+  const extras=$('impExtras').checked;
+  const mapped=new Set([iN,iP,iE,iC,iA].filter(x=>x>=0));
+  const existing=new Set(state.leads.map(l=>l.phone));
+  let added=0,skipped=0;
+  for(const r of imp.rows){
+    const phone=normPhone(r[iP]);
+    if(phone.length<8){skipped++;continue;}
+    if(existing.has(phone)){skipped++;continue;}
+    existing.add(phone);
+    let created=Date.now();
+    if(iC>=0&&r[iC]){const d=new Date(r[iC]); if(!isNaN(d))created=d.getTime();}
+    let notes='';
+    if(iA>=0&&r[iA]) notes+='Ad: '+r[iA];
+    if(extras){
+      imp.headers.forEach((h,i)=>{
+        if(!mapped.has(i)&&r[i]&&r[i].trim()&&!/^(id|form_id|is_organic|lead_status|platform)$/i.test(h.trim()))
+          notes+=(notes?'\n':'')+h.trim()+': '+r[i].trim();
+      });
+    }
+    const l={id:uid(),name:(iN>=0?r[iN]:'').trim()||'Lead '+phone.slice(-4),phone,
+      email:iE>=0?(r[iE]||'').trim():'',source:'meta',createdAt:created,lastActionAt:created,
+      status:'new',objection:'',followUpAt:null,notes,attempts:0,log:[]};
+    addLog(l,'import','Imported from Meta CSV');
+    l.lastActionAt=created;
+    state.leads.push(l);
+    added++;
+  }
+  closeOv('ovImport'); imp=null;
+  setTab('today');
+  toast('Imported '+added+' lead'+(added===1?'':'s')+(skipped?' · skipped '+skipped+' (duplicates/invalid)':''));
+};
+
+/* =================== backup / export =================== */
+function download(name,text,type){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type}));
+  a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+}
+function exportJSON(){
+  state.lastBackupAt=Date.now(); save();
+  download('forgecraft-crm-backup-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(state,null,1),'application/json');
+  render(); toast('Backup downloaded — keep it somewhere safe');
+}
+$('backupBanner').onclick=exportJSON;
+$('jsonFile').addEventListener('change',e=>{
+  const f=e.target.files[0]; e.target.value=''; if(!f)return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const inc=JSON.parse(r.result);
+      if(!inc||!Array.isArray(inc.leads))throw 0;
+      let added=0,updated=0,kept=0;
+      const byPhone=new Map(state.leads.map(l=>[l.phone,l]));
+      const byIdM=new Map(state.leads.map(l=>[l.id,l]));
+      for(const nl of inc.leads){
+        const ex=byIdM.get(nl.id)||byPhone.get(nl.phone);
+        if(!ex){state.leads.push(nl);byPhone.set(nl.phone,nl);byIdM.set(nl.id,nl);added++;}
+        else if((nl.lastActionAt||0)>(ex.lastActionAt||0)){Object.assign(ex,nl);updated++;}
+        else kept++;
+      }
+      if(Array.isArray(inc.templates)){
+        const tIds=new Set(state.templates.map(t=>t.id));
+        for(const t of inc.templates) if(!tIds.has(t.id)) state.templates.push(t);
+      }
+      render();
+      toast('Merged: +'+added+' new, '+updated+' updated, '+kept+' unchanged');
+    }catch(err){toast('That file doesn\'t look like a CRM backup');}
+  };
+  r.readAsText(f);
+});
+function exportCSV(){
+  const head=['name','phone','email','status','source','created','attempts','objection','follow_up','notes'];
+  const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+  const rows=state.leads.map(l=>[l.name,'+'+l.phone,l.email,STATUSES[l.status]?.label||l.status,l.source,
+    l.createdAt?new Date(l.createdAt).toISOString().slice(0,10):'',l.attempts||0,l.objection||'',
+    l.followUpAt?new Date(l.followUpAt).toISOString().slice(0,10):'',l.notes||''].map(q).join(','));
+  download('forgecraft-leads.csv',head.join(',')+'\n'+rows.join('\n'),'text/csv');
+}
+function wipeAll(){
+  if(!confirm('Delete ALL leads and templates from this browser? Export a backup first if you\'re not sure.'))return;
+  if(!confirm('Really sure? This cannot be undone.'))return;
+  localStorage.removeItem(LS_KEY); state=load(); render(); toast('All data deleted');
+}
+
+/* =================== templates =================== */
+function renderTemplates(){
+  $('tplList').innerHTML=state.templates.map(t=>`
+    <div class="bl"><div class="who"><b>${esc(t.name)}</b><span>${esc(t.text.slice(0,80))}${t.text.length>80?'…':''}</span></div>
+      <button class="btn ghost sm" onclick="editTemplate('${t.id}')">Edit</button>
+      <button class="btn danger sm" onclick="delTemplate('${t.id}')">✕</button></div>`).join('')||'<div class="note">No templates yet.</div>';
+}
+function addTemplate(){
+  const name=prompt('Template name (e.g. "Weekend recap")'); if(!name)return;
+  const text=prompt('Message — use {name} for the lead\'s first name'); if(!text)return;
+  state.templates.push({id:uid(),name:name.trim(),text:text.trim()});
+  save(); renderTemplates();
+}
+function editTemplate(id){
+  const t=state.templates.find(x=>x.id===id); if(!t)return;
+  const name=prompt('Template name',t.name); if(name===null)return;
+  const text=prompt('Message — use {name} for first name',t.text); if(text===null)return;
+  t.name=name.trim()||t.name; t.text=text.trim()||t.text;
+  save(); renderTemplates();
+}
+function delTemplate(id){
+  state.templates=state.templates.filter(t=>t.id!==id);
+  save(); renderTemplates();
+}
+
+/* =================== broadcast =================== */
+const SEGS=[['nurture','🌱 Nurture'],['lost','✖️ Lost'],['no_answer','📵 No answer'],['follow_up','📅 Follow up'],['new','📞 Not called yet']];
+let segOn=new Set(['nurture']);
+function renderSeg(){
+  $('bSeg').innerHTML=SEGS.map(([k,lbl])=>{
+    const n=state.leads.filter(l=>l.status===k).length;
+    return `<button class="optchip ${segOn.has(k)?'on':''}" onclick="toggleSeg('${k}')">${lbl} (${n})</button>`;
+  }).join('');
+}
+function toggleSeg(k){segOn.has(k)?segOn.delete(k):segOn.add(k);renderSeg();$('bList').innerHTML='';}
+function segLeads(){return state.leads.filter(l=>segOn.has(l.status));}
+$('btnBroadcast').onclick=()=>{
+  renderSeg();
+  $('bTpl').innerHTML='<option value="">Start from a template…</option>'+state.templates.map(t=>`<option value="${t.id}">${esc(t.name)}</option>`).join('');
+  $('bList').innerHTML='';
+  openOv('ovBroadcast');
+};
+$('bTpl').addEventListener('change',e=>{
+  const t=state.templates.find(x=>x.id===e.target.value);
+  if(t)$('bMsg').value=t.text;
+});
+$('btnBuildList').onclick=()=>{
+  const msg=$('bMsg').value.trim();
+  if(!msg){toast('Write the message first');return;}
+  const ls=segLeads();
+  if(!ls.length){toast('No leads in the selected groups');return;}
+  $('bList').innerHTML=`<div class="note"><b>${ls.length}</b> to send — tap each, WhatsApp opens ready to go:</div>`+
+    ls.map(l=>`<div class="bl" id="bl_${l.id}">
+      <div class="who"><b>${esc(l.name)}</b><span>${fmtPhone(l.phone)} · ${STATUSES[l.status].label}${l.lastBlastAt?' · last blast '+fmtDate(l.lastBlastAt):''}</span></div>
+      <a class="btn gold sm" style="text-decoration:none" target="_blank" rel="noopener" href="${waLink(l,msg)}" onclick="blastSent('${l.id}')">💬 Send</a>
+    </div>`).join('');
+};
+function blastSent(id){
+  const l=byId(id); if(!l)return;
+  l.lastBlastAt=Date.now();
+  addLog(l,'wa','📣 Sent nurture blast');
+  save();
+  const row=$('bl_'+id); if(row){row.classList.add('sent'); row.querySelector('a').textContent='✅ Sent';}
+}
+function copyNumbers(){
+  const ls=segLeads();
+  if(!ls.length){toast('No leads in the selected groups');return;}
+  const txt=ls.map(l=>'+'+l.phone).join('\n');
+  (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(
+    ()=>toast('Copied '+ls.length+' numbers'),
+    ()=>{prompt('Copy these numbers:',txt);});
+}
+
+/* =================== overlays =================== */
+function openOv(id){$(id).classList.add('open');document.body.style.overflow='hidden';}
+function closeOv(id){$(id).classList.remove('open');document.body.style.overflow='';}
+function openMenu(){renderTemplates();openOv('ovMenu');}
+$('btnMenu').onclick=openMenu;
+document.querySelectorAll('.overlay').forEach(ov=>{
+  ov.addEventListener('click',e=>{if(e.target===ov)closeOv(ov.id);});
+});
+
+render();
+</script>
+</body>
+</html>

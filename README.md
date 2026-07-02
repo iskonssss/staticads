@@ -4,6 +4,8 @@ A single-file, offline ad generator for **Forgecraft** (a 3D-printing workshop f
 
 **Live site:** https://iskonssss.github.io/staticads/
 
+This repo also contains the **[Forgecraft Leads CRM](https://iskonssss.github.io/staticads/crm.html)** (`crm.html`) — see [Leads CRM](#leads-crm) below.
+
 ## How to use
 
 1. **Upload an image** — click the upload box (or drag a photo onto it).
@@ -17,6 +19,23 @@ A single-file, offline ad generator for **Forgecraft** (a 3D-printing workshop f
 ## AI copy (optional)
 
 The **✨ Generate ad copy** button drafts the eyebrow / headline / subhead / CTA with Claude (Haiku 4.5). It's bring-your-own-key: paste your Anthropic API key once under **AI settings** — it's saved only in your browser's `localStorage`, never uploaded or committed, and is never written into exported JSON. The page calls the Claude API directly from the browser; only the text copy is generated, never your image. Roughly US$0.0015 per generation. The tool works fully without this — it's just a shortcut for first drafts you can then edit by hand.
+
+## Leads CRM
+
+`crm.html` is a phone-first CRM for working Meta Ads leads for the Beginner 3D Printing Session — same philosophy as the ad tool: one static file, no build step, no server, works offline.
+
+**Live page:** https://iskonssss.github.io/staticads/crm.html
+
+What it does:
+
+- **🔥 Today queue** — the default view shows exactly who to call right now: overdue follow-ups first, then new leads you've never called, then no-answer retries. No more guessing who you've contacted.
+- **One-tap Call / WhatsApp** on every lead. After you tap Call and come back to the page, it prompts you to log the outcome.
+- **Call logging** — picked up / no answer (attempt count), outcome (🎉 closed, 📅 follow up with a date, 🌱 nurture, ✖️ lost) and the objection (price, timing, kid too young…).
+- **Import Meta Ads CSV** — download leads from Ads Manager / Leads Center and import; duplicates (by phone) are skipped, so you can safely re-import the full export every few days. Extra form questions land in the lead's notes.
+- **📣 Blast (nurture)** — pick a segment (nurture / lost / no answer…), write one message (use `{name}`), then tap Send per lead: WhatsApp opens pre-filled and personalised. Includes editable message templates.
+- **Stats** — due now, to call, follow-ups, won, close rate.
+
+**Where the data lives:** in the browser's `localStorage` on that device — nothing is uploaded anywhere. To use it on both phone and laptop, use **☰ → Export backup** on one device and **Restore / merge backup** on the other; merge keeps the most recently updated copy of each lead. The page nags you to back up if it's been more than a week.
 
 ## Notes
 
