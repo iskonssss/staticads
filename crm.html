@@ -102,6 +102,9 @@ input,select,textarea{font-family:inherit; font-size:15px}
 .b-won{background:var(--grn-bg); color:var(--grn)}
 .b-nurture{background:var(--gold); color:var(--green-dk)}
 .b-lost{background:var(--gray-bg); color:var(--muted)}
+.b-soft_book{background:#dff0f3; color:#17727f}
+.b-runout{background:#fdeeda; color:#c26a00}
+.b-expired{background:var(--red-bg); color:var(--red)}
 .qa{display:flex; gap:8px}
 .qbtn{
   width:42px; height:42px; border-radius:12px; border:1px solid var(--line);
@@ -343,16 +346,20 @@ const LS_KEY='forgecraft_crm_v1';
 const STATUSES={
   new:{label:'To call',emoji:'📞'},
   no_answer:{label:'No answer',emoji:'📵'},
+  soft_book:{label:'Soft book',emoji:'📌'},
   follow_up:{label:'Follow up',emoji:'📅'},
-  won:{label:'Won',emoji:'🎉'},
+  won:{label:'Converted',emoji:'🎉'},
   nurture:{label:'Nurture',emoji:'🌱'},
   lost:{label:'Lost',emoji:'✖️'},
 };
+const RUNOUT_MS=12*3600e3; // hold counts as "running out" in its last 12 hours
 const OBJECTIONS=['Price','Timing / schedule','Location too far','Kid too young','Need to ask partner','Still deciding','Just enquiring','Other'];
 const DEFAULT_TEMPLATES=[
  {id:'t1',name:'Missed call intro',text:"Hi {name}! 👋 This is Forgecraft — we tried calling about your enquiry for our Beginner 3D Printing Session (1 day, 2.5 hrs). When's a good time to chat? 🖨️"},
  {id:'t2',name:'Weekend recap (nurture)',text:"Hi {name}! 👋 Quick share — this happened last weekend at Forgecraft: our young makers designed and 3D-printed their own creations in one 2.5-hr session 🖨️✨ We've got new slots open — want me to save one for your kid?"},
  {id:'t3',name:'Follow up nudge',text:"Hi {name}, just checking in on the Beginner 3D Printing Session we spoke about 😊 Slots for this weekend are filling up — shall I reserve one?"},
+ {id:'t4',name:'Slot hold confirmation',text:"Hi {name}! 📌 As discussed, I'm holding a slot at the Beginner 3D Printing Session for you until {expiry}. Reply here to confirm and it's locked in 🖨️✨"},
+ {id:'t5',name:'Hold running out',text:"Hi {name}! ⏳ Quick heads up — the slot I'm holding for you expires {expiry}. Shall I confirm it for your kid before it's released?"},
 ];
 
 let state=load();
@@ -391,37 +398,65 @@ function fmtDate(t){
 function fmtDT(t){return new Date(t).toLocaleDateString('en-SG',{day:'numeric',month:'short'})+' '+new Date(t).toLocaleTimeString('en-SG',{hour:'numeric',minute:'2-digit'});}
 function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
 function addLog(l,type,text){l.log=l.log||[];l.log.push({ts:Date.now(),type,text});l.lastActionAt=Date.now();}
-function waLink(l,msg){return 'https://wa.me/'+l.phone+(msg?'?text='+encodeURIComponent(msg.replaceAll('{name}',firstName(l.name))):'');}
+function waLink(l,msg){
+  if(!msg) return 'https://wa.me/'+l.phone;
+  const expiry=l.holdUntil?fmtDT(l.holdUntil):'soon';
+  return 'https://wa.me/'+l.phone+'?text='+encodeURIComponent(msg.replaceAll('{name}',firstName(l.name)).replaceAll('{expiry}',expiry));
+}
 function telLink(l){return 'tel:+'+l.phone;}
+function softState(l){
+  if(l.status!=='soft_book'||!l.holdUntil) return null;
+  const rem=l.holdUntil-Date.now();
+  return rem<=0?'expired':rem<=RUNOUT_MS?'running_out':'held';
+}
+function fmtRemaining(ms){
+  ms=Math.abs(ms);
+  const d=Math.floor(ms/DAY), h=Math.floor(ms%DAY/3600e3), m=Math.floor(ms%3600e3/60e3);
+  return d?d+'d '+h+'h':h?h+'h '+m+'m':m+'m';
+}
+function badgeHtml(l){
+  const st=softState(l);
+  if(st==='expired') return '<span class="badge b-expired">⌛ Expired</span>';
+  if(st==='running_out') return '<span class="badge b-runout">⏳ Running out</span>';
+  const s=STATUSES[l.status]||STATUSES.new;
+  return `<span class="badge b-${l.status}">${s.emoji} ${s.label}</span>`;
+}
 
 /* =================== list rendering =================== */
 let activeTab='today', query='';
 const TABS=[
   ['today','🔥 Today'],['all','All'],['new','To call'],['no_answer','No answer'],
-  ['follow_up','Follow up'],['nurture','Nurture'],['won','Won'],['lost','Lost'],
+  ['soft_book','Soft booked'],['follow_up','Follow up'],['nurture','Nurture'],['won','Converted'],['lost','Lost'],
 ];
 
 function counts(){
-  const c={all:state.leads.length,new:0,no_answer:0,follow_up:0,won:0,nurture:0,lost:0,due:0};
+  const c={all:state.leads.length,new:0,no_answer:0,soft_book:0,follow_up:0,won:0,nurture:0,lost:0,due:0};
   for(const l of state.leads){
     c[l.status]=(c[l.status]||0)+1;
     if(l.status==='follow_up'&&l.followUpAt&&startOfDay(l.followUpAt)<=today0()) c.due++;
+    const st=softState(l);
+    if(st==='expired'||st==='running_out') c.due++;
   }
   return c;
 }
 
 function todayQueue(){
   const n0=today0();
-  const overdue=[],fresh=[],retry=[];
+  const expired=[],runout=[],overdue=[],fresh=[],retry=[];
   for(const l of state.leads){
-    if(l.status==='follow_up'&&l.followUpAt&&startOfDay(l.followUpAt)<=n0) overdue.push(l);
+    const st=softState(l);
+    if(st==='expired') expired.push(l);
+    else if(st==='running_out') runout.push(l);
+    else if(l.status==='follow_up'&&l.followUpAt&&startOfDay(l.followUpAt)<=n0) overdue.push(l);
     else if(l.status==='new') fresh.push(l);
     else if(l.status==='no_answer'&&startOfDay(l.lastCallAt||0)<n0) retry.push(l);
   }
+  expired.sort((a,b)=>(a.holdUntil||0)-(b.holdUntil||0));
+  runout.sort((a,b)=>(a.holdUntil||0)-(b.holdUntil||0));
   overdue.sort((a,b)=>(a.followUpAt||0)-(b.followUpAt||0));
   fresh.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
   retry.sort((a,b)=>(a.lastCallAt||0)-(b.lastCallAt||0));
-  return {overdue,fresh,retry};
+  return {expired,runout,overdue,fresh,retry};
 }
 
 function render(){
@@ -434,7 +469,7 @@ function render(){
     <div class="stat ${c.due?'hot':''}" onclick="setTab('today')"><b>${c.due+ c.new}</b><span>Due now</span></div>
     <div class="stat" onclick="setTab('new')"><b>${c.new}</b><span>To call</span></div>
     <div class="stat" onclick="setTab('follow_up')"><b>${c.follow_up}</b><span>Follow up</span></div>
-    <div class="stat won" onclick="setTab('won')"><b>${c.won}</b><span>Won</span></div>
+    <div class="stat won" onclick="setTab('won')"><b>${c.won}</b><span>Converted</span></div>
     <div class="stat" onclick="setTab('all')"><b>${rate}%</b><span>Close rate</span></div>`;
   // chips
   $('chips').innerHTML=TABS.map(([k,lbl])=>{
@@ -449,7 +484,7 @@ function render(){
   const match=l=>!query||l.name.toLowerCase().includes(query)||l.phone.includes(query.replace(/\D/g,'')||'§');
   if(activeTab==='today'&&!query){
     const q=todayQueue();
-    if(!q.overdue.length&&!q.fresh.length&&!q.retry.length){
+    if(!q.expired.length&&!q.runout.length&&!q.overdue.length&&!q.fresh.length&&!q.retry.length){
       el.innerHTML=emptyHtml(state.leads.length?'🎉':'👋',
         state.leads.length?'All caught up! No calls due right now.':'No leads yet.',
         state.leads.length?'':'Import your Meta Ads CSV or add a lead to get started.',
@@ -457,6 +492,8 @@ function render(){
       return;
     }
     el.innerHTML=
+      (q.expired.length?`<div class="sechead" style="color:var(--red)">⌛ Holds expired — chase now (${q.expired.length})</div>`+q.expired.map(cardHtml).join(''):'')+
+      (q.runout.length?`<div class="sechead" style="color:#c26a00">⏳ Holds running out (${q.runout.length})</div>`+q.runout.map(cardHtml).join(''):'')+
       (q.overdue.length?`<div class="sechead">📅 Follow-ups due (${q.overdue.length})</div>`+q.overdue.map(cardHtml).join(''):'')+
       (q.fresh.length?`<div class="sechead">🆕 New — never called (${q.fresh.length})</div>`+q.fresh.map(cardHtml).join(''):'')+
       (q.retry.length?`<div class="sechead">📵 No answer — try again (${q.retry.length})</div>`+q.retry.map(cardHtml).join(''):'');
@@ -464,6 +501,7 @@ function render(){
   }
   let ls=state.leads.filter(l=>(activeTab==='all'||activeTab==='today'||l.status===activeTab)&&match(l));
   if(activeTab==='follow_up') ls.sort((a,b)=>(a.followUpAt||9e15)-(b.followUpAt||9e15));
+  else if(activeTab==='soft_book') ls.sort((a,b)=>(a.holdUntil||9e15)-(b.holdUntil||9e15));
   else ls.sort((a,b)=>(b.lastActionAt||b.createdAt||0)-(a.lastActionAt||a.createdAt||0));
   el.innerHTML=ls.length?ls.map(cardHtml).join(''):
     emptyHtml('🔍','Nothing here'+(query?' for “'+esc(query)+'”':'.'),'',!state.leads.length);
@@ -473,7 +511,6 @@ function emptyHtml(big,line1,line2,showImport){
   ${showImport?`<button class="btn primary" onclick="openMenu()">📥 Import Meta CSV</button> <button class="btn gold" onclick="openAdd()">＋ Add lead</button>`:''}</div>`;
 }
 function cardHtml(l){
-  const s=STATUSES[l.status]||STATUSES.new;
   const bits=[];
   bits.push((l.source==='meta'?'Meta':l.source==='referral'?'Referral':l.source==='manual'?'Manual':'Lead')+' · in '+fmtDate(l.createdAt));
   if(l.attempts) bits.push(l.attempts+'× called');
@@ -481,10 +518,13 @@ function cardHtml(l){
     const od=startOfDay(l.followUpAt)<today0();
     bits.push((od?'<span class="warn">overdue — ':'follow up ')+fmtDate(l.followUpAt)+(od?'</span>':''));
   }
+  const st=softState(l);
+  if(st==='expired') bits.push('<span class="warn">hold expired '+fmtRemaining(l.holdUntil-Date.now())+' ago</span>');
+  else if(st) bits.push((st==='running_out'?'<span class="warn">':'')+'hold ends in '+fmtRemaining(l.holdUntil-Date.now())+(st==='running_out'?'</span>':''));
   if(l.objection) bits.push('💬 '+esc(l.objection));
   return `<div class="card" onclick="openDetail('${l.id}')">
     <div class="main">
-      <div class="nm">${esc(l.name)} <span class="badge b-${l.status}">${s.emoji} ${s.label}</span></div>
+      <div class="nm">${esc(l.name)} ${badgeHtml(l)}</div>
       <div class="meta">${fmtPhone(l.phone)} · ${bits.join(' · ')}</div>
     </div>
     <div class="qa" onclick="event.stopPropagation()">
@@ -524,19 +564,30 @@ function openDetail(id,highlight){
 }
 function renderDetail(highlight){
   const l=byId(curId); if(!l){closeOv('ovDetail');return;}
-  const s=STATUSES[l.status];
   const logHtml=(l.log||[]).slice().reverse().map(e=>
     `<li>${esc(e.text)}<div class="ts">${fmtDT(e.ts)}</div></li>`).join('');
+  const st=softState(l);
+  const holdTpl=state.templates.find(t=>t.id===(st==='held'?'t4':'t5'));
+  const holdPanel=st?`
+  <h3 style="${st!=='held'?'color:'+(st==='expired'?'var(--red)':'#c26a00'):''}">📌 Slot hold — ${
+    st==='expired'?'EXPIRED '+fmtRemaining(l.holdUntil-Date.now())+' ago':
+    (st==='running_out'?'⏳ running out — ':'')+'ends '+fmtDT(l.holdUntil)+' ('+fmtRemaining(l.holdUntil-Date.now())+' left)'}</h3>
+  <div class="rowbtns">
+    <button class="btn primary" onclick="outcome('won')">🎉 Confirmed — Converted</button>
+    <button class="btn gold" onclick="showHoldPicker('Extend the hold — new deadline:')">⌛ Extend hold</button>
+    <button class="btn ghost" onclick="outcome('nurture')">🌱 Release → nurture</button>
+    ${holdTpl?`<a class="btn ghost sm" style="text-decoration:none" target="_blank" rel="noopener" href="${waLink(l,holdTpl.text)}" onclick="waTapped('${l.id}')">💬 Send “${esc(holdTpl.name)}”</a>`:''}
+  </div>`:'';
   $('shDetail').innerHTML=`
   <div class="grab"></div>
   <button class="btn ghost sm close" onclick="closeOv('ovDetail')">✕ Close</button>
-  <h2>${esc(l.name)} <span class="badge b-${l.status}">${s.emoji} ${s.label}</span></h2>
+  <h2>${esc(l.name)} ${badgeHtml(l)}</h2>
   <div class="note">${fmtPhone(l.phone)}${l.email?' · '+esc(l.email):''} · came in ${fmtDate(l.createdAt)}${l.attempts?' · called '+l.attempts+'×':''}</div>
   <div class="bigacts">
     <a class="callbtn" href="${telLink(l)}" onclick="callTapped('${l.id}')">📞 Call</a>
     <a class="wabtn" href="${waLink(l,'')}" target="_blank" rel="noopener" onclick="waTapped('${l.id}')">💬 WhatsApp</a>
   </div>
-
+  ${holdPanel}
   <h3 ${highlight?'style="color:var(--red)"':''}>Log a call ${highlight?'← how did it go?':''}</h3>
   <div class="rowbtns">
     <button class="btn primary" onclick="logPicked()">✅ Picked up</button>
@@ -592,16 +643,46 @@ function logPicked(){
   $('outcomeBox').innerHTML=`
   <div class="note">Nice! What was the outcome?</div>
   <div class="rowbtns">
-    <button class="btn primary" onclick="outcome('won')">🎉 Closed the deal</button>
-    <button class="btn gold" onclick="outcome('follow_up')">📅 Follow up later</button>
+    <button class="btn primary" onclick="outcome('won')">🎉 Closed — Converted</button>
+    <button class="btn gold" onclick="showHoldPicker()">📌 Soft book a slot</button>
+    <button class="btn ghost" onclick="outcome('follow_up')">📅 Follow up later</button>
     <button class="btn ghost" onclick="outcome('nurture')">🌱 Not now — nurture</button>
     <button class="btn ghost" onclick="outcome('lost')">✖️ Not interested</button>
   </div>`;
 }
+function showHoldPicker(title){
+  const l=byId(curId); if(!l)return;
+  const box=$('outcomeBox'); if(!box)return;
+  box.innerHTML=`
+  <div class="note">${esc(title||'How long are you holding the slot?')}</div>
+  <div class="rowbtns">
+    <button class="btn primary" onclick="softBook(24)">24 hours</button>
+    <button class="btn primary" onclick="softBook(48)">48 hours</button>
+    <button class="btn primary" onclick="softBook(72)">3 days</button>
+    <input type="datetime-local" id="holdCustom" style="padding:8px;border:1px solid var(--line);border-radius:10px;background:#fff">
+    <button class="btn gold" onclick="softBookCustom()">Set</button>
+  </div>`;
+  box.scrollIntoView({block:'center',behavior:'smooth'});
+}
+function softBook(hours){
+  const l=byId(curId); if(!l)return;
+  l.status='soft_book'; l.holdSetAt=Date.now(); l.holdUntil=Date.now()+hours*3600e3;
+  l.followUpAt=null;
+  addLog(l,'status','📌 Soft booked — slot held until '+fmtDT(l.holdUntil));
+  render(); renderDetail();
+  toast('📌 Hold set — expires '+fmtDT(l.holdUntil));
+}
+function softBookCustom(){
+  const v=$('holdCustom')?.value;
+  if(!v){toast('Pick the date & time first');return;}
+  const t=new Date(v).getTime();
+  if(isNaN(t)||t<=Date.now()){toast('Pick a time in the future');return;}
+  softBook((t-Date.now())/3600e3);
+}
 function outcome(st){
   const l=byId(curId); if(!l)return;
-  l.status=st;
-  if(st==='won'){l.wonAt=Date.now(); l.followUpAt=null; addLog(l,'status','🎉 Deal closed — signed up!'); toast('🎉 Closed! Nice one.');}
+  l.status=st; l.holdUntil=null;
+  if(st==='won'){l.wonAt=Date.now(); l.followUpAt=null; addLog(l,'status','🎉 Converted — signed up!'); toast('🎉 Converted! Nice one.');}
   if(st==='follow_up'){addLog(l,'status','📅 Spoke — follow up needed');}
   if(st==='nurture'){addLog(l,'status','🌱 Not now — moved to nurture list');}
   if(st==='lost'){l.followUpAt=null; addLog(l,'status','✖️ Not interested — marked lost');}
@@ -611,7 +692,9 @@ function outcome(st){
 }
 function setStatus(st){
   const l=byId(curId); if(!l||l.status===st)return;
-  l.status=st; if(st==='won')l.wonAt=Date.now();
+  if(st==='soft_book'){showHoldPicker(); return;}
+  l.status=st; l.holdUntil=null;
+  if(st==='won')l.wonAt=Date.now();
   addLog(l,'status','Status → '+STATUSES[st].label);
   render(); renderDetail();
 }
@@ -625,7 +708,7 @@ function setObjection(o){
 function setFU(days){
   const l=byId(curId); if(!l)return;
   l.followUpAt=today0()+days*DAY+9*3600e3;
-  if(l.status!=='won'&&l.status!=='lost') l.status='follow_up';
+  if(l.status!=='won'&&l.status!=='lost'){l.status='follow_up'; l.holdUntil=null;}
   addLog(l,'status','Follow-up set for '+fmtDate(l.followUpAt));
   render(); renderDetail(); toast('Follow up '+fmtDate(l.followUpAt));
 }
@@ -633,7 +716,7 @@ function setFUDate(v){
   const l=byId(curId); if(!l)return;
   if(!v){l.followUpAt=null; render(); renderDetail(); return;}
   l.followUpAt=new Date(v+'T09:00').getTime();
-  if(l.status!=='won'&&l.status!=='lost') l.status='follow_up';
+  if(l.status!=='won'&&l.status!=='lost'){l.status='follow_up'; l.holdUntil=null;}
   addLog(l,'status','Follow-up set for '+fmtDate(l.followUpAt));
   render(); renderDetail();
 }
@@ -834,11 +917,12 @@ $('jsonFile').addEventListener('change',e=>{
   r.readAsText(f);
 });
 function exportCSV(){
-  const head=['name','phone','email','status','source','created','attempts','objection','follow_up','notes'];
+  const head=['name','phone','email','status','source','created','attempts','objection','follow_up','hold_expires','notes'];
   const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
   const rows=state.leads.map(l=>[l.name,'+'+l.phone,l.email,STATUSES[l.status]?.label||l.status,l.source,
     l.createdAt?new Date(l.createdAt).toISOString().slice(0,10):'',l.attempts||0,l.objection||'',
-    l.followUpAt?new Date(l.followUpAt).toISOString().slice(0,10):'',l.notes||''].map(q).join(','));
+    l.followUpAt?new Date(l.followUpAt).toISOString().slice(0,10):'',
+    l.holdUntil?new Date(l.holdUntil).toISOString():'',l.notes||''].map(q).join(','));
   download('forgecraft-leads.csv',head.join(',')+'\n'+rows.join('\n'),'text/csv');
 }
 function wipeAll(){
@@ -873,7 +957,7 @@ function delTemplate(id){
 }
 
 /* =================== broadcast =================== */
-const SEGS=[['nurture','🌱 Nurture'],['lost','✖️ Lost'],['no_answer','📵 No answer'],['follow_up','📅 Follow up'],['new','📞 Not called yet']];
+const SEGS=[['nurture','🌱 Nurture'],['lost','✖️ Lost'],['no_answer','📵 No answer'],['soft_book','📌 Soft booked'],['follow_up','📅 Follow up'],['new','📞 Not called yet']];
 let segOn=new Set(['nurture']);
 function renderSeg(){
   $('bSeg').innerHTML=SEGS.map(([k,lbl])=>{
@@ -930,6 +1014,8 @@ document.querySelectorAll('.overlay').forEach(ov=>{
 });
 
 render();
+// keep hold countdowns / expiry states fresh while the page sits open
+setInterval(()=>{if(!document.querySelector('.overlay.open'))render();},60000);
 </script>
 </body>
 </html>

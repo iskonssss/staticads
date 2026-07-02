@@ -28,7 +28,8 @@ The **✨ Generate ad copy** button drafts the eyebrow / headline / subhead / CT
 
 What it does:
 
-- **🔥 Today queue** — the default view shows exactly who to call right now: overdue follow-ups first, then new leads you've never called, then no-answer retries. No more guessing who you've contacted.
+- **🔥 Today queue** — the default view shows exactly who to work right now, in priority order: expired slot holds, holds running out, overdue follow-ups, new leads you've never called, then no-answer retries. No more guessing who you've contacted.
+- **📌 Soft booking** — when a parent says yes on the phone but hasn't paid, soft-book a slot with a hold duration (24 h / 48 h / 3 days / custom deadline). The lead shows a live countdown, flips to **⏳ Running out** in the last 12 hours and **⌛ Expired** after the deadline — both jump to the top of the Today queue. One tap converts, extends the hold, or releases to nurture, and there are `{expiry}`-aware WhatsApp templates for hold confirmations and expiry chasers.
 - **One-tap Call / WhatsApp** on every lead. After you tap Call and come back to the page, it prompts you to log the outcome.
 - **Call logging** — picked up / no answer (attempt count), outcome (🎉 closed, 📅 follow up with a date, 🌱 nurture, ✖️ lost) and the objection (price, timing, kid too young…).
 - **Import Meta Ads CSV** — download leads from Leads Centre or Ads Manager and import; both formats are auto-detected. Duplicates (by phone) are skipped, so you can safely re-import the full export every few days. Leads already marked **Converted** in Leads Centre come in as Won; extra form questions land in the lead's notes; rows with no phone number (e.g. Messenger/IG organic leads) are skipped and counted.
